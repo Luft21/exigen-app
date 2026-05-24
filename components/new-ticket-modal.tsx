@@ -11,7 +11,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Mic, MicOff, Plus, FileText } from "lucide-react";
@@ -20,7 +19,6 @@ export function NewTicketModal() {
   const [open, setOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [reportText, setReportText] = useState("");
-  const [assetId, setAssetId] = useState("");
   
   const recognitionRef = useRef<any>(null);
 
@@ -84,7 +82,6 @@ export function NewTicketModal() {
     setTimeout(() => {
       setOpen(false);
       setReportText("");
-      setAssetId("");
       if (isListening) {
         recognitionRef.current?.stop();
         setIsListening(false);
@@ -117,16 +114,6 @@ export function NewTicketModal() {
           
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="asset">ID / Nama Aset</Label>
-              <Input
-                id="asset"
-                placeholder="Contoh: AST-005 Pompa Air"
-                value={assetId}
-                onChange={(e) => setAssetId(e.target.value)}
-                required
-              />
-            </div>
-            <div className="grid gap-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="report">Deskripsi Kerusakan</Label>
                 <Button
@@ -152,7 +139,7 @@ export function NewTicketModal() {
               <Textarea
                 id="report"
                 placeholder="Deskripsikan masalah yang terjadi pada aset..."
-                className="min-h-[120px]"
+                className="min-h-[150px]"
                 value={reportText}
                 onChange={(e) => setReportText(e.target.value)}
                 required

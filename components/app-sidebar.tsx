@@ -9,6 +9,7 @@ import {
   Wrench,
   RefreshCw,
   Activity,
+  ClipboardEdit,
 } from "lucide-react";
 import {
   Sidebar,
@@ -27,6 +28,10 @@ const navItems = [
   { title: "Aset", href: "/aset", icon: Box },
   { title: "Maintenance", href: "/maintenance", icon: Wrench },
   { title: "Penggantian", href: "/penggantian", icon: RefreshCw },
+];
+
+const dataItems = [
+  { title: "Input Servis", href: "/input-servis", icon: ClipboardEdit },
 ];
 
 export function AppSidebar() {
@@ -61,6 +66,37 @@ export function AppSidebar() {
                 item.href === "/"
                   ? pathname === "/"
                   : pathname.startsWith(item.href);
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive}
+                    tooltip={item.title}
+                    className={cn(
+                      "w-full rounded-lg px-3 transition-all duration-150",
+                      "hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
+                      isActive &&
+                        "bg-primary text-primary-foreground font-semibold shadow-md hover:bg-primary/90 hover:text-primary-foreground"
+                    )}
+                  >
+                    <Link href={item.href} className="flex w-full items-center gap-2">
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60 px-4">
+            Data & Teknisi
+          </SidebarGroupLabel>
+          <SidebarMenu className="gap-1 px-1">
+            {dataItems.map((item) => {
+              const isActive = pathname.startsWith(item.href);
               return (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
