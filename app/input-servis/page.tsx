@@ -19,47 +19,55 @@ import { Save, CheckCircle2, RotateCcw, Database } from "lucide-react";
 
 const severityOptions = ["Ringan", "Sedang", "Berat", "Kritis"];
 
+const initialForm = {
+  idAset: "",
+  namaAset: "",
+  kategori: "",
+  subKategori: "",
+  tipe: "",
+  tanggalPerencanaan: "",
+  tanggalPengerjaan: "",
+  tanggalSelesai: "",
+  jenisKerusakan: "",
+  severity: "",
+  penyebab: "",
+  biayaPerbaikan: "",
+  sparePartDigunakan: "",
+  teknisiPelaksana: "",
+};
+
 export default function InputServisPage() {
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({
-    idAset: "",
-    tanggalPengerjaan: "",
-    tanggalSelesai: "",
-    jenisKerusakan: "",
-    severity: "",
-    penyebab: "",
-    biayaPerbaikan: "",
-    sparePartDigunakan: "",
-    teknisiPelaksana: "",
-  });
+  const [form, setForm] = useState(initialForm);
 
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleAssetChange = (assetId: string) => {
+    const asset = masterAssets.find((a) => a.id === assetId);
+    if (asset) {
+      setForm((prev) => ({
+        ...prev,
+        idAset: asset.id,
+        namaAset: asset.nama,
+        kategori: asset.kategori,
+        subKategori: asset.subKategori,
+        tipe: asset.tipe,
+      }));
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate saving the data
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 3000);
   };
 
   const handleReset = () => {
-    setForm({
-      idAset: "",
-      tanggalPengerjaan: "",
-      tanggalSelesai: "",
-      jenisKerusakan: "",
-      severity: "",
-      penyebab: "",
-      biayaPerbaikan: "",
-      sparePartDigunakan: "",
-      teknisiPelaksana: "",
-    });
+    setForm(initialForm);
     setSubmitted(false);
   };
-
-  const selectedAsset = masterAssets.find((a) => a.id === form.idAset);
 
   return (
     <div className="space-y-6">
@@ -82,8 +90,8 @@ export default function InputServisPage() {
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
             Setiap data servis yang diinput akan digunakan model Random Forest
-            Regressor untuk belajar pola kerusakan terbaru dan memperbaiki akurasi
-            prediksi sisa umur aset.
+            Regressor untuk belajar pola kerusakan terbaru dan memperbaiki
+            akurasi prediksi sisa umur aset.
           </p>
         </div>
       </div>
@@ -97,17 +105,17 @@ export default function InputServisPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Row 1: Asset & Technician */}
+            {/* Row 1: ID Aset & Nama Aset */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="idAset">Aset yang Diperbaiki</Label>
+                <Label htmlFor="idAset">ID Aset</Label>
                 <Select
                   value={form.idAset}
-                  onValueChange={(v) => handleChange("idAset", v)}
+                  onValueChange={handleAssetChange}
                   required
                 >
                   <SelectTrigger id="idAset">
-                    <SelectValue placeholder="Pilih aset..." />
+                    <SelectValue placeholder="Pilih ID Aset..." />
                   </SelectTrigger>
                   <SelectContent>
                     {masterAssets.map((a) => (
@@ -117,29 +125,67 @@ export default function InputServisPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {selectedAsset && (
-                  <p className="text-[10px] text-muted-foreground">
-                    {selectedAsset.kategori} · {selectedAsset.lokasiGedung},{" "}
-                    {selectedAsset.lokasiLantai}
-                  </p>
-                )}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="teknisi">Teknisi Pelaksana</Label>
+                <Label htmlFor="namaAset">Nama Aset</Label>
                 <Input
-                  id="teknisi"
-                  placeholder="Nama teknisi..."
-                  value={form.teknisiPelaksana}
-                  onChange={(e) =>
-                    handleChange("teknisiPelaksana", e.target.value)
-                  }
-                  required
+                  id="namaAset"
+                  placeholder="Otomatis terisi saat memilih ID Aset"
+                  value={form.namaAset}
+                  readOnly
+                  className="bg-muted/40"
                 />
               </div>
             </div>
 
-            {/* Row 2: Dates */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Row 2: Kategori, Sub Kategori, Tipe */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="kategori">Kategori</Label>
+                <Input
+                  id="kategori"
+                  placeholder="—"
+                  value={form.kategori}
+                  readOnly
+                  className="bg-muted/40"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="subKategori">Sub Kategori</Label>
+                <Input
+                  id="subKategori"
+                  placeholder="—"
+                  value={form.subKategori}
+                  readOnly
+                  className="bg-muted/40"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="tipe">Tipe</Label>
+                <Input
+                  id="tipe"
+                  placeholder="—"
+                  value={form.tipe}
+                  readOnly
+                  className="bg-muted/40"
+                />
+              </div>
+            </div>
+
+            {/* Row 3: Tanggal Perencanaan, Pengerjaan, Selesai */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="tglPerencanaan">Tanggal Perencanaan</Label>
+                <Input
+                  id="tglPerencanaan"
+                  type="date"
+                  value={form.tanggalPerencanaan}
+                  onChange={(e) =>
+                    handleChange("tanggalPerencanaan", e.target.value)
+                  }
+                  required
+                />
+              </div>
               <div className="grid gap-2">
                 <Label htmlFor="tglPengerjaan">Tanggal Pengerjaan</Label>
                 <Input
@@ -166,7 +212,7 @@ export default function InputServisPage() {
               </div>
             </div>
 
-            {/* Row 3: Damage type & Severity */}
+            {/* Row 4: Jenis Kerusakan & Severity */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="jenisKerusakan">Jenis Kerusakan</Label>
@@ -201,12 +247,12 @@ export default function InputServisPage() {
               </div>
             </div>
 
-            {/* Row 4: Root cause */}
+            {/* Row 5: Penyebab */}
             <div className="grid gap-2">
-              <Label htmlFor="penyebab">Root Cause / Penyebab</Label>
+              <Label htmlFor="penyebab">Penyebab</Label>
               <Textarea
                 id="penyebab"
-                placeholder="Deskripsikan akar penyebab kerusakan..."
+                placeholder="Deskripsikan penyebab kerusakan..."
                 className="min-h-[80px]"
                 value={form.penyebab}
                 onChange={(e) => handleChange("penyebab", e.target.value)}
@@ -214,7 +260,7 @@ export default function InputServisPage() {
               />
             </div>
 
-            {/* Row 5: Cost & Spare parts */}
+            {/* Row 6: Biaya Perbaikan & Spare Part */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="biaya">Biaya Perbaikan (Rp)</Label>
@@ -239,6 +285,22 @@ export default function InputServisPage() {
                   onChange={(e) =>
                     handleChange("sparePartDigunakan", e.target.value)
                   }
+                />
+              </div>
+            </div>
+
+            {/* Row 7: Teknisi Pelaksana */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="teknisi">Teknisi Pelaksana</Label>
+                <Input
+                  id="teknisi"
+                  placeholder="Nama teknisi pelaksana..."
+                  value={form.teknisiPelaksana}
+                  onChange={(e) =>
+                    handleChange("teknisiPelaksana", e.target.value)
+                  }
+                  required
                 />
               </div>
             </div>
