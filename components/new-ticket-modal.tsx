@@ -12,8 +12,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Mic, MicOff, Plus, FileText } from "lucide-react";
+import { buatTiketOtomatis } from "@/app/actions/ticket";
 
 export function NewTicketModal() {
   const [open, setOpen] = useState(false);
@@ -76,17 +78,18 @@ export function NewTicketModal() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Simulate submission
-    setTimeout(() => {
+  const handleSubmit = async (formData: FormData) => {
+    try {
+      await buatTiketOtomatis(formData);
       setOpen(false);
       setReportText("");
       if (isListening) {
         recognitionRef.current?.stop();
         setIsListening(false);
       }
-    }, 300);
+    } catch (error) {
+      console.error("Gagal buat tiket", error);
+    }
   };
 
   return (
@@ -104,7 +107,7 @@ export function NewTicketModal() {
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit}>
+        <form action={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Buat Tiket Laporan</DialogTitle>
             <DialogDescription>
@@ -113,6 +116,15 @@ export function NewTicketModal() {
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="idAset">ID Aset</Label>
+              <Input
+                id="idAset"
+                name="idAset"
+                placeholder="Ketik ID Aset (contoh: AST-123...)"
+                required
+              />
+            </div>
             <div className="grid gap-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="report">Deskripsi Kerusakan</Label>
@@ -137,7 +149,8 @@ export function NewTicketModal() {
                 </Button>
               </div>
               <Textarea
-                id="report"
+                id="keluhan"
+                name="keluhan"
                 placeholder="Deskripsikan masalah yang terjadi pada aset..."
                 className="min-h-[150px]"
                 value={reportText}

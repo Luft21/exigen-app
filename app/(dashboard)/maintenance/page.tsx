@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { assetComplaints, formatDate, formatRupiah } from "@/lib/data";
+import prisma from "@/lib/prisma";
 
 export const metadata = {
   title: "Maintenance",
@@ -14,12 +14,44 @@ const severityColor: Record<string, string> = {
   Kritis: "bg-destructive/15 text-destructive border-destructive/30",
 };
 
-export default function MaintenancePage() {
-  const sorted = [...assetComplaints].sort(
-    (a, b) =>
-      new Date(b.tanggalPerencanaan).getTime() -
-      new Date(a.tanggalPerencanaan).getTime()
-  );
+// Helpers untuk format data langsung di file agar tidak tergantung lib/data.ts
+const formatDate = (date: Date | string | null) => {
+  if (!date) return "-";
+  return new Date(date).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatRupiah = (num: number) => {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(num);
+};
+
+export default async function MaintenancePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const params = await searchParams;
+  const page = parseInt(params.page || "1", 10);
+  const pageSize = 50; // Tampilkan 50 per halaman
+
+  const [assetComplaintsDb, totalCount] = await Promise.all([
+    prisma.assetComplaint.findMany({
+      orderBy: { tanggalPerencanaan: "desc" },
+      include: { teknisiPelaksana: true },
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+    }),
+    prisma.assetComplaint.count(),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
     <div className="space-y-6">
@@ -32,8 +64,8 @@ export default function MaintenancePage() {
 
       <Card className="animate-fade-in-up overflow-hidden">
         <CardHeader>
-          <CardTitle className="font-heading text-sm">
-            Riwayat Maintenance ({sorted.length} records)
+        <CardTitle className="font-heading text-sm">
+            Riwayat Maintenance ({totalCount} records)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -55,7 +87,7 @@ export default function MaintenancePage() {
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
-                {sorted.map((c) => (
+                {assetComplaintsDb.map((c) => (
                   <tr key={c.id} className="border-b transition-colors hover:bg-muted/50">
                     <td className="p-4 align-middle whitespace-nowrap font-heading text-xs">{c.id}</td>
                     <td className="p-4 align-middle whitespace-nowrap text-xs">
@@ -76,12 +108,35 @@ export default function MaintenancePage() {
                     <td className="p-4 align-middle whitespace-nowrap text-xs text-muted-foreground max-w-[180px] truncate">{c.penyebab}</td>
                     <td className="p-4 align-middle whitespace-nowrap text-xs font-heading text-right">{formatRupiah(c.biayaPerbaikan)}</td>
                     <td className="p-4 align-middle whitespace-nowrap text-xs text-muted-foreground max-w-[180px] truncate">{c.sparePartDigunakan}</td>
-                    <td className="p-4 align-middle whitespace-nowrap text-xs">{c.teknisiPelaksana}</td>
+                    <td className="p-4 align-middle whitespace-nowrap text-xs">{c.teknisiPelaksana?.nama || "-"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <span className="text-sm text-muted-foreground">
+                Halaman {page} dari {totalPages}
+              </span>
+              <div className="flex gap-2">
+                <a 
+                  href={page > 1 ? `?page=${page - 1}` : "#"}
+                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3 ${page <= 1 ? "opacity-50 pointer-events-none" : ""}`}
+                >
+                  Prev
+                </a>
+                <a 
+                  href={page < totalPages ? `?page=${page + 1}` : "#"}
+                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3 ${page >= totalPages ? "opacity-50 pointer-events-none" : ""}`}
+                >
+                  Next
+                </a>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

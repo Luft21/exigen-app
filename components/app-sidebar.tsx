@@ -9,8 +9,11 @@ import {
   Wrench,
   RefreshCw,
   Activity,
-  ClipboardEdit,
+  Ticket,
+  MessageSquareWarning,
+  LogOut,
 } from "lucide-react";
+import { signOut } from "next-auth/react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,13 +28,10 @@ import {
 
 const navItems = [
   { title: "Overview", href: "/", icon: LayoutDashboard },
+  { title: "Tiket Komplain", href: "/tiket", icon: Ticket },
   { title: "Aset", href: "/aset", icon: Box },
   { title: "Maintenance", href: "/maintenance", icon: Wrench },
   { title: "Penggantian", href: "/penggantian", icon: RefreshCw },
-];
-
-const dataItems = [
-  { title: "Input Servis", href: "/input-servis", icon: ClipboardEdit },
 ];
 
 export function AppSidebar() {
@@ -76,7 +76,7 @@ export function AppSidebar() {
                       "w-full rounded-lg px-3 transition-all duration-150",
                       "hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
                       isActive &&
-                        "bg-primary text-primary-foreground font-semibold shadow-md hover:bg-primary/90 hover:text-primary-foreground"
+                      "bg-primary text-primary-foreground font-semibold shadow-md hover:bg-primary/90 hover:text-primary-foreground"
                     )}
                   >
                     <Link href={item.href} className="flex w-full items-center gap-2">
@@ -90,45 +90,23 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60 px-4">
-            Data & Teknisi
-          </SidebarGroupLabel>
-          <SidebarMenu className="gap-1 px-1">
-            {dataItems.map((item) => {
-              const isActive = pathname.startsWith(item.href);
-              return (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive}
-                    tooltip={item.title}
-                    className={cn(
-                      "w-full rounded-lg px-3 transition-all duration-150",
-                      "hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
-                      isActive &&
-                        "bg-primary text-primary-foreground font-semibold shadow-md hover:bg-primary/90 hover:text-primary-foreground"
-                    )}
-                  >
-                    <Link href={item.href} className="flex w-full items-center gap-2">
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
+
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-4 group-data-[collapsible=icon]:p-2">
+      <SidebarFooter className="border-t border-sidebar-border p-4 group-data-[collapsible=icon]:p-2 flex flex-col gap-3">
         <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
           <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
           <span className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
             Model RF Active
           </span>
         </div>
+        <button
+          onClick={() => signOut({ callbackUrl: '/login' })}
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-150 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          <span className="group-data-[collapsible=icon]:hidden font-medium">Logout</span>
+        </button>
       </SidebarFooter>
     </Sidebar>
   );

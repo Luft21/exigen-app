@@ -16,14 +16,9 @@ import {
   Legend,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  getHealthDistribution,
-  getSisaUmurPerKategori,
-  getMonthlyDamageFrequency,
-} from "@/lib/data";
 
-export function HealthDonutChart() {
-  const data = getHealthDistribution();
+
+export function HealthDonutChart({ data }: { data: { name: string, value: number, fill: string }[] }) {
   const total = data.reduce((s, d) => s + d.value, 0);
 
   return (
@@ -71,8 +66,7 @@ export function HealthDonutChart() {
   );
 }
 
-export function SisaUmurBarChart() {
-  const data = getSisaUmurPerKategori();
+export function SisaUmurBarChart({ data }: { data: any[] }) {
 
   return (
     <Card className="animate-fade-in-up" style={{ animationDelay: "500ms" }}>
@@ -109,8 +103,7 @@ export function SisaUmurBarChart() {
   );
 }
 
-export function DamageFrequencyChart() {
-  const data = getMonthlyDamageFrequency();
+export function DamageFrequencyChart({ data }: { data: any[] }) {
 
   return (
     <Card className="animate-fade-in-up col-span-full" style={{ animationDelay: "600ms" }}>

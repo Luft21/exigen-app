@@ -1,0 +1,112 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  MANAJEMEN
+  TEKNISI
+}
+
+enum StatusTiket {
+  MENUNGGU_TEKNISI
+  PROSES_SERVIS
+  MENUNGGU_APPROVAL_GANTI
+  SELESAI
+  DITOLAK
+}
+
+enum TindakanTeknisi {
+  SERVIS
+  GANTI
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  nama      String
+  role      Role     @default(TEKNISI)
+  
+  // Relasi
+  tiketDikerjakan  AssetComplaint[] @relation("Teknisi")
+  tiketDisetujui   AssetComplaint[] @relation("ManajemenApproval")
+}
+
+model MasterAsset {
+  id                  String   @id
+  nama                String
+  merek               String
+  model               String
+  kategori            String
+  subKategori         String
+  tipe                String
+  tanggalInstalasi    DateTime
+  lokasiGedung        String
+  lokasiLantai        String
+  lokasiZona          String
+  tingkatKekritisan   String
+  status              String
+  sisaUmurHari        Int
+  estimasiPenggantian DateTime
+  healthStatus        String
+
+  complaints          AssetComplaint[]
+}
+
+model AssetComplaint {
+  id                  String   @id
+  idAset              String
+  namaAset            String
+  kategori            String
+  subKategori         String
+  tipe                String
+  tanggalPerencanaan  DateTime
+  tanggalPengerjaan   DateTime
+  tanggalSelesai      DateTime?
+  jenisKerusakan      String
+  severity            String
+  penyebab            String
+  biayaPerbaikan      Int
+  sparePartDigunakan  String
+  
+  // Relasi ke MasterAsset
+  asset               MasterAsset @relation(fields: [idAset], references: [id])
+  
+  // Field Tambahan Workflow
+  statusTiket         StatusTiket @default(MENUNGGU_TEKNISI)
+  tindakanTeknisi     TindakanTeknisi?
+  
+  idTeknisi           String?
+  teknisiPelaksana    User?    @relation("Teknisi", fields: [idTeknisi], references: [id])
+  
+  idManajemenApproval String?
+  manajemenApproval   User?    @relation("ManajemenApproval", fields: [idManajemenApproval], references: [id])
+}
+
+model ReplacementHistory {
+  id                  Int      @id @default(autoincrement())
+  idAsetLama          String
+  namaAsetLama        String
+  kategori            String
+  tipe                String
+  idAsetBaru          String
+  tanggalPenggantian  DateTime
+  alasanPenggantian   String
+  biayaPenggantian    Int
+}
+
+model FrequencyPlan {
+  id                  Int      @id @default(autoincrement())
+  kategori            String
+  subKategori         String
+  tipe                String
+  frekuensi           String
+}

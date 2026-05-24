@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -20,65 +21,58 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
-import { masterAssets, type MasterAsset, type AssetStatus } from "@/lib/data";
-import { ArrowUpDown, Search } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-type SortKey = "sisaUmurHari" | "nama" | "id";
-type SortDir = "asc" | "desc";
+interface AssetTableProps {
+  initialAssets: any[];
+  categories: string[];
+  locations: string[];
+  currentPage: number;
+  totalPages: number;
+  searchParams: any;
+}
 
-export function AssetTable() {
-  const [search, setSearch] = useState("");
-  const [filterKategori, setFilterKategori] = useState<string>("all");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [filterLokasi, setFilterLokasi] = useState<string>("all");
-  const [sortKey, setSortKey] = useState<SortKey>("sisaUmurHari");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+export function AssetTable({ 
+  initialAssets, 
+  categories, 
+  locations, 
+  currentPage, 
+  totalPages,
+  searchParams 
+}: AssetTableProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParamsHook = useSearchParams();
 
-  const categories = useMemo(() => [...new Set(masterAssets.map((a) => a.kategori))], []);
-  const locations = useMemo(() => [...new Set(masterAssets.map((a) => a.lokasiGedung))], []);
-  const statuses: AssetStatus[] = ["Healthy", "Watch", "Warning", "Critical"];
+  // Local state untuk Input (agar tidak terlalu banyak re-render/request saat mengetik)
+  const [searchValue, setSearchValue] = useState(searchParams.q || "");
 
-  const filtered = useMemo(() => {
-    let list = [...masterAssets];
-
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (a) =>
-          a.id.toLowerCase().includes(q) ||
-          a.nama.toLowerCase().includes(q)
-      );
+  // Fungsi untuk update URL query params
+  const updateQuery = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParamsHook.toString());
+    if (value && value !== "all") {
+      params.set(key, value);
+    } else {
+      params.delete(key);
     }
-    if (filterKategori !== "all") list = list.filter((a) => a.kategori === filterKategori);
-    if (filterStatus !== "all") list = list.filter((a) => a.healthStatus === filterStatus);
-    if (filterLokasi !== "all") list = list.filter((a) => a.lokasiGedung === filterLokasi);
-
-    list.sort((a, b) => {
-      const av = a[sortKey];
-      const bv = b[sortKey];
-      if (typeof av === "number" && typeof bv === "number") {
-        return sortDir === "asc" ? av - bv : bv - av;
-      }
-      return sortDir === "asc"
-        ? String(av).localeCompare(String(bv))
-        : String(bv).localeCompare(String(av));
-    });
-
-    return list;
-  }, [search, filterKategori, filterStatus, filterLokasi, sortKey, sortDir]);
-
-  function toggleSort(key: SortKey) {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortKey(key);
-      setSortDir("asc");
+    
+    // Reset ke page 1 jika mengganti filter
+    if (key !== 'page') {
+      params.set('page', '1');
     }
-  }
 
-  const umurHariNow = (a: MasterAsset) => {
-    const inst = new Date(a.tanggalInstalasi).getTime();
-    const now = new Date("2026-05-17").getTime();
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateQuery("q", searchValue);
+  };
+
+  const umurHariNow = (tanggalInstalasi: Date) => {
+    const inst = new Date(tanggalInstalasi).getTime();
+    const now = new Date().getTime();
     return Math.floor((now - inst) / (1000 * 60 * 60 * 24));
   };
 
@@ -89,18 +83,25 @@ export function AssetTable() {
       </CardHeader>
       <CardContent>
         {/* Filters */}
-        <div className="flex flex-wrap gap-3 mb-4">
-          <div className="relative flex-1 min-w-[200px]">
+        <form onSubmit={handleSearchSubmit} className="flex flex-wrap gap-3 mb-4">
+          <div className="relative flex-1 min-w-[200px] flex items-center gap-2">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Cari ID atau nama aset..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari ID atau nama aset... (Tekan Enter)"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
               className="pl-9 h-9 text-sm"
               id="asset-search"
             />
+            <Button type="submit" size="sm" variant="secondary" className="h-9">
+              Cari
+            </Button>
           </div>
-          <Select value={filterKategori} onValueChange={setFilterKategori}>
+          
+          <Select 
+            value={searchParams.category || "all"} 
+            onValueChange={(val) => updateQuery("category", val)}
+          >
             <SelectTrigger className="w-[150px] h-9 text-sm" id="filter-kategori">
               <SelectValue placeholder="Kategori" />
             </SelectTrigger>
@@ -111,58 +112,40 @@ export function AssetTable() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={filterLokasi} onValueChange={setFilterLokasi}>
-            <SelectTrigger className="w-[150px] h-9 text-sm" id="filter-lokasi">
-              <SelectValue placeholder="Lokasi" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Lokasi</SelectItem>
-              {locations.map((l) => (
-                <SelectItem key={l} value={l}>{l}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
+
+          <Select 
+            value={searchParams.status || "all"} 
+            onValueChange={(val) => updateQuery("status", val)}
+          >
             <SelectTrigger className="w-[150px] h-9 text-sm" id="filter-status">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua Status</SelectItem>
-              {statuses.map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
+              <SelectItem value="Healthy">Healthy</SelectItem>
+              <SelectItem value="Watch">Watch</SelectItem>
+              <SelectItem value="Warning">Warning</SelectItem>
+              <SelectItem value="Critical">Critical</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </form>
 
         {/* Table */}
         <div className="rounded-lg border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent bg-muted/60">
-                <TableHead className="w-[100px]">
-                  <Button variant="ghost" size="sm" className="h-7 px-1 text-xs" onClick={() => toggleSort("id")}>
-                    ID <ArrowUpDown className="ml-1 h-3 w-3" />
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button variant="ghost" size="sm" className="h-7 px-1 text-xs" onClick={() => toggleSort("nama")}>
-                    Nama <ArrowUpDown className="ml-1 h-3 w-3" />
-                  </Button>
-                </TableHead>
+                <TableHead className="w-[100px]">ID</TableHead>
+                <TableHead>Nama</TableHead>
                 <TableHead className="hidden md:table-cell">Kategori</TableHead>
                 <TableHead className="hidden lg:table-cell">Lokasi</TableHead>
-                <TableHead className="text-right">Umur</TableHead>
-                <TableHead className="text-right">
-                  <Button variant="ghost" size="sm" className="h-7 px-1 text-xs" onClick={() => toggleSort("sisaUmurHari")}>
-                    Sisa Umur <ArrowUpDown className="ml-1 h-3 w-3" />
-                  </Button>
-                </TableHead>
+                <TableHead className="text-right">Umur Skrg</TableHead>
+                <TableHead className="text-right">Sisa Umur</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((a) => (
+              {initialAssets.map((a) => (
                 <TableRow
                   key={a.id}
                   className="cursor-pointer transition-colors hover:bg-muted/50"
@@ -175,23 +158,50 @@ export function AssetTable() {
                   <TableCell className="font-medium text-sm">{a.nama}</TableCell>
                   <TableCell className="hidden md:table-cell text-xs text-muted-foreground">{a.kategori}</TableCell>
                   <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">{a.lokasiGedung}</TableCell>
-                  <TableCell className="text-right font-heading text-xs">{umurHariNow(a)} hari</TableCell>
+                  <TableCell className="text-right font-heading text-xs">{umurHariNow(a.tanggalInstalasi)} hari</TableCell>
                   <TableCell className="text-right font-heading text-xs font-semibold">{a.sisaUmurHari} hari</TableCell>
                   <TableCell>
                     <StatusBadge status={a.healthStatus} />
                   </TableCell>
                 </TableRow>
               ))}
-              {filtered.length === 0 && (
+              {initialAssets.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    Tidak ada aset ditemukan
+                    Tidak ada aset ditemukan.
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4">
+            <span className="text-sm text-muted-foreground">
+              Halaman {currentPage} dari {totalPages}
+            </span>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => updateQuery("page", String(currentPage - 1))}
+                disabled={currentPage <= 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => updateQuery("page", String(currentPage + 1))}
+                disabled={currentPage >= totalPages}
+              >
+                Next <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

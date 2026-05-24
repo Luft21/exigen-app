@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { masterAssets } from "@/lib/data";
+
 import { Box, AlertTriangle, Clock } from "lucide-react";
 
 interface KPICardProps {
@@ -36,25 +36,19 @@ function KPICard({ title, value, subtitle, icon, accent, delay = 0 }: KPICardPro
   );
 }
 
-export function KPICards() {
-  const totalAset = masterAssets.length;
-  const asetKritis = masterAssets.filter((a) => a.sisaUmurHari <= 30).length;
-  const rataRata = Math.round(
-    masterAssets.reduce((s, a) => s + a.sisaUmurHari, 0) / totalAset
-  );
-
+export function KPICards({ data }: { data: { totalAset: number, asetKritis: number, rataRata: number } }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       <KPICard
         title="Total Aset"
-        value={totalAset}
+        value={data.totalAset}
         subtitle="Aset terdaftar"
         icon={<Box className="h-5 w-5" />}
         delay={0}
       />
       <KPICard
         title="Aset Kritis"
-        value={asetKritis}
+        value={data.asetKritis}
         subtitle="Sisa umur ≤ 30 hari"
         icon={<AlertTriangle className="h-5 w-5" />}
         accent="text-destructive"
@@ -62,7 +56,7 @@ export function KPICards() {
       />
       <KPICard
         title="Rata-rata Sisa Umur"
-        value={`${rataRata} hari`}
+        value={`${data.rataRata} hari`}
         subtitle="Semua aset aktif"
         icon={<Clock className="h-5 w-5" />}
         delay={200}
