@@ -3,13 +3,9 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { selesaikanServis } from "@/app/actions/ticket";
 import { Wrench } from "lucide-react";
 import prisma from "@/lib/prisma";
+import { FormServisClient } from "@/components/form-servis-client";
 
 export const metadata = {
   title: "Input Servis Teknisi",
@@ -35,6 +31,25 @@ export default async function FormServisPage({
     return <div>Tiket tidak ditemukan.</div>;
   }
 
+  // Fetch unique data untuk rekomendasi (combobox)
+  const uniqueKerusakan = await prisma.assetComplaint.findMany({
+    where: { jenisKerusakan: { not: "-" } },
+    select: { jenisKerusakan: true },
+    distinct: ['jenisKerusakan']
+  });
+
+  const uniquePenyebab = await prisma.assetComplaint.findMany({
+    where: { penyebab: { not: "-" } },
+    select: { penyebab: true },
+    distinct: ['penyebab']
+  });
+
+  const uniqueSparepart = await prisma.assetComplaint.findMany({
+    where: { sparePartDigunakan: { not: "-" } },
+    select: { sparePartDigunakan: true },
+    distinct: ['sparePartDigunakan']
+  });
+
   // Helper konversi datetime ke format YYYY-MM-DD
   const formatForDateInput = (d: Date | null) => {
     if (!d) return new Date().toISOString().split("T")[0];
@@ -57,84 +72,12 @@ export default async function FormServisPage({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={selesaikanServis} className="space-y-6">
-            <input type="hidden" name="idTiket" value={tiket.id} />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>ID Aset</Label>
-                <Input value={tiket.idAset} readOnly className="bg-muted/40" />
-              </div>
-              <div className="grid gap-2">
-                <Label>Nama Aset</Label>
-                <Input value={tiket.namaAset} readOnly className="bg-muted/40" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Tanggal Pengerjaan</Label>
-                <Input 
-                  type="date" 
-                  name="tanggalPengerjaan" 
-                  defaultValue={formatForDateInput(tiket.tanggalPengerjaan)}
-                  required 
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>Tanggal Selesai</Label>
-                <Input 
-                  type="date" 
-                  name="tanggalSelesai" 
-                  defaultValue={formatForDateInput(new Date())}
-                  required 
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Rincian Kerusakan (Bisa diedit teknisi)</Label>
-              <Input 
-                name="jenisKerusakan" 
-                defaultValue={tiket.jenisKerusakan}
-                required 
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Penyebab (Diagnosa Teknisi)</Label>
-              <Textarea 
-                name="penyebab" 
-                defaultValue={tiket.penyebab.replace("AI: Belum ada saran dari AI", "").trim()}
-                placeholder="Tuliskan penyebab kerusakan yang sebenarnya ditemukan..."
-                className="min-h-[80px]"
-                required 
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Biaya Perbaikan (Rp)</Label>
-                <Input 
-                  type="number" 
-                  name="biayaPerbaikan" 
-                  defaultValue={tiket.biayaPerbaikan}
-                  min="0"
-                  required 
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>Spare Part Digunakan</Label>
-                <Input 
-                  name="sparePartDigunakan" 
-                  defaultValue={tiket.sparePartDigunakan === "-" ? "" : tiket.sparePartDigunakan}
-                  placeholder="Contoh: Baut, Kabel..." 
-                />
-              </div>
-            </div>
-
-            <Button type="submit">Simpan & Selesaikan Tiket</Button>
-          </form>
+          <FormServisClient 
+            tiket={tiket} 
+            uniqueKerusakan={uniqueKerusakan.map(k => k.jenisKerusakan)} 
+            uniquePenyebab={uniquePenyebab.map(p => p.penyebab)} 
+            uniqueSparepart={uniqueSparepart.map(s => s.sparePartDigunakan)} 
+          />
         </CardContent>
       </Card>
     </div>

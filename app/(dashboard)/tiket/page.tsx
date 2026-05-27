@@ -8,6 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { Wrench, CheckCircle, XCircle, MessageSquareWarning } from "lucide-react";
 import { rejectPenggantian, ajukanPenggantian, mulaiServis } from "@/app/actions/ticket";
+import { AssignAssetModal } from "@/components/assign-asset-modal";
+import { AjukanGantiModal } from "@/components/ajukan-ganti-modal";
+import { ApproveGantiModal } from "@/components/approve-ganti-modal";
+import { ActionButtonClient } from "@/components/action-button-client";
 import prisma from "@/lib/prisma";
 
 const statusColor: Record<string, string> = {
@@ -44,6 +48,15 @@ export default async function TiketPage({
     include: { teknisiPelaksana: true, asset: true },
   });
 
+  const masterAssets = await prisma.masterAsset.findMany({
+    where: { status: "Aktif" },
+  });
+
+  const teknisiList = await prisma.user.findMany({
+    where: { role: "TEKNISI" },
+    select: { id: true, nama: true, username: true }
+  });
+
   const [historyTickets, totalHistory, stagingTickets] = await Promise.all([
     prisma.assetComplaint.findMany({
       where: {
@@ -75,7 +88,7 @@ export default async function TiketPage({
 
   const totalPages = Math.ceil(totalHistory / pageSize);
 
-  const renderStagingTable = (data: any[]) => (
+  const renderStagingTable = (data: any[], teknisiData: any[]) => (
     <div className="rounded-lg border overflow-x-auto bg-card">
       <table className="w-full text-sm">
         <thead className="bg-muted/60 border-b">
@@ -103,7 +116,7 @@ export default async function TiketPage({
               </td>
               <td className="p-4 align-middle text-xs">
                 <div>Gedung: <span className="font-medium">{t.predLokasiGedung}</span></div>
-                <div className="text-muted-foreground">Lt. {t.predLokasiLantai}, Zona {t.predLokasiZona}</div>
+                <div className="text-muted-foreground">{t.predLokasiLantai.replace("Lantai ", "Lt. ")}, {t.predLokasiZona}</div>
               </td>
               <td className="p-4 align-middle">
                 <Badge variant="outline" className={`text-[10px] ${t.predSeverityAwal === 'Tinggi' ? 'bg-destructive/15 text-destructive border-destructive/30' : t.predSeverityAwal === 'Sedang' ? 'bg-warning/15 text-warning border-warning/30' : 'bg-primary/15 text-primary border-primary/30'}`}>
@@ -112,9 +125,7 @@ export default async function TiketPage({
               </td>
               <td className="p-4 align-middle text-center">
                 <div className="flex justify-center gap-2">
-                  <Button size="sm" variant="default" className="h-8 gap-1" disabled>
-                    <CheckCircle className="h-3 w-3" /> Assign Aset (WIP)
-                  </Button>
+                  <AssignAssetModal staging={t} assets={masterAssets} teknisiList={teknisiData} />
                 </div>
               </td>
             </tr>
@@ -165,6 +176,11 @@ export default async function TiketPage({
                 <Badge variant="outline" className={`text-[10px] ${statusColor[t.statusTiket]}`}>
                   {t.statusTiket.replace(/_/g, " ")}
                 </Badge>
+                {t.isGantiDitolak && t.statusTiket === "MENUNGGU_TEKNISI" && (
+                  <Badge variant="destructive" className="text-[9px] mt-1 block w-fit">
+                    Ganti Ditolak
+                  </Badge>
+                )}
               </td>
               <td className="p-4 align-middle text-xs">{t.teknisiPelaksana?.nama || "-"}</td>
               <td className="p-4 align-middle text-center">
@@ -173,19 +189,27 @@ export default async function TiketPage({
                   {/* AKSI TEKNISI */}
                   {role === "TEKNISI" && (
                     <>
-                      {(t.statusTiket === "MENUNGGU_TEKNISI" || t.statusTiket === "PROSES_SERVIS") && (
+                      {t.statusTiket === "MENUNGGU_TEKNISI" && (
                         <>
-                          <Link href={`/tiket/${t.id}/servis`}>
-                            <Button size="sm" variant="outline" className="h-8 gap-1 text-primary border-primary/50 hover:bg-primary hover:text-primary-foreground">
-                              <Wrench className="h-3 w-3" /> Servis
-                            </Button>
-                          </Link>
-                          <form action={ajukanPenggantian.bind(null, t.id)}>
-                            <Button size="sm" variant="outline" className="h-8 gap-1 text-destructive border-destructive/50 hover:bg-destructive hover:text-destructive-foreground">
-                              <CheckCircle className="h-3 w-3" /> Ganti
-                            </Button>
-                          </form>
+                          <ActionButtonClient 
+                            action={mulaiServis.bind(null, t.id)} 
+                            variant="outline"
+                            className="text-primary border-primary/50 hover:bg-primary hover:text-primary-foreground"
+                            confirmTitle="Mulai Pekerjaan?"
+                            confirmText="Pastikan Anda sudah berada di lokasi aset untuk mulai menservis."
+                          >
+                            <Wrench className="h-3 w-3 mr-1" /> Mulai Kerja
+                          </ActionButtonClient>
+                          <AjukanGantiModal tiketId={t.id} namaAset={t.namaAset} isGantiDitolak={t.isGantiDitolak} />
                         </>
+                      )}
+                      
+                      {t.statusTiket === "PROSES_SERVIS" && (
+                        <Link href={`/tiket/${t.id}/servis`}>
+                          <Button size="sm" variant="default" className="h-8 gap-1">
+                            <CheckCircle className="h-3 w-3" /> Input & Selesai
+                          </Button>
+                        </Link>
                       )}
                     </>
                   )}
@@ -195,16 +219,21 @@ export default async function TiketPage({
                     <>
                       {t.statusTiket === "MENUNGGU_APPROVAL_GANTI" && (
                         <>
-                          <Link href={`/tiket/${t.id}/review`}>
-                            <Button size="sm" variant="default" className="h-8 gap-1 bg-success hover:bg-success/90">
-                              <CheckCircle className="h-3 w-3" /> Approve
-                            </Button>
-                          </Link>
-                          <form action={rejectPenggantian.bind(null, t.id)}>
-                            <Button size="sm" variant="destructive" className="h-8 gap-1">
-                              <XCircle className="h-3 w-3" /> Reject
-                            </Button>
-                          </form>
+                          <ApproveGantiModal 
+                            tiketId={t.id} 
+                            namaAsetLama={t.namaAset} 
+                            merekLama={t.asset?.merek || ""} 
+                            modelLama={t.asset?.model || ""}
+                            assets={masterAssets}
+                          />
+                          <ActionButtonClient
+                            action={rejectPenggantian.bind(null, t.id)}
+                            variant="destructive"
+                            confirmTitle="Tolak Penggantian?"
+                            confirmText="Tiket akan dikembalikan ke teknisi untuk diservis."
+                          >
+                            <XCircle className="h-3 w-3 mr-1" /> Reject
+                          </ActionButtonClient>
                         </>
                       )}
                     </>
@@ -258,7 +287,7 @@ export default async function TiketPage({
               <TabsTrigger value="riwayat" className="font-medium">Riwayat Selesai ({totalHistory})</TabsTrigger>
             </TabsList>
             <TabsContent value="staging" className="m-0 animate-fade-in-up">
-              {renderStagingTable(stagingTickets)}
+              {renderStagingTable(stagingTickets, teknisiList)}
             </TabsContent>
             <TabsContent value="aktif" className="m-0 animate-fade-in-up">
               {renderTable(activeTickets)}

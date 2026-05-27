@@ -69,7 +69,7 @@ model AssetComplaint {
   subKategori         String
   tipe                String
   tanggalPerencanaan  DateTime
-  tanggalPengerjaan   DateTime
+  tanggalPengerjaan   DateTime?
   tanggalSelesai      DateTime?
   jenisKerusakan      String
   severity            String
@@ -82,6 +82,7 @@ model AssetComplaint {
   // Field Tambahan Workflow
   statusTiket         StatusTiket @default(MENUNGGU_TEKNISI)
   tindakanTeknisi     TindakanTeknisi?
+  isGantiDitolak      Boolean @default(false)
   
   idTeknisi           String?
   teknisiPelaksana    User?    @relation("Teknisi", fields: [idTeknisi], references: [id])
@@ -115,7 +116,7 @@ model KomplainPerbaikan {
   teksKeluhan         String
   predTipeAset        String
   predLokasiGedung    String
-  predLokasiLantai    Int
+  predLokasiLantai    String
   predLokasiZona      String
   predKategoriDept    String
   predSeverityAwal    String

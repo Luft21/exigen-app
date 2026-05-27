@@ -59,14 +59,8 @@ export async function POST(req: NextRequest) {
 
         if (aiResponse.status_tiket === 'Open' || aiResponse.is_complete === true) {
             // SKENARIO A: LENGKAP -> Simpan ke Tabel Staging (KomplainPerbaikan)
-            
-            // Konversi tipe lantai ke Integer (karena NLP mengembalikan string / angka)
-            let lantai = 0;
-            const predLantai = aiResponse.predictions.lokasi_lantai;
-            if (predLantai) {
-                const parsed = parseInt(predLantai, 10);
-                if (!isNaN(parsed)) lantai = parsed;
-            }
+
+            // Prediksi lokasi_lantai langsung disimpan sebagai string karena tipe data lantai bisa "Basement" atau "Lantai 1"
 
             const newTicket = await prisma.komplainPerbaikan.create({
                 data: {
@@ -74,7 +68,7 @@ export async function POST(req: NextRequest) {
                     teksKeluhan: aiResponse.teks_asli || '',
                     predTipeAset: aiResponse.predictions.tipe_aset || 'Unknown',
                     predLokasiGedung: aiResponse.predictions.lokasi_gedung || '-',
-                    predLokasiLantai: lantai,
+                    predLokasiLantai: aiResponse.predictions.lokasi_lantai,
                     predLokasiZona: aiResponse.predictions.lokasi_zona || '-',
                     predKategoriDept: aiResponse.predictions.kategori_dept || 'Unknown',
                     predSeverityAwal: aiResponse.predictions.severity_awal || 'Rendah',
@@ -97,7 +91,7 @@ export async function POST(req: NextRequest) {
 
             const missing = aiResponse.missing_fields || [];
             let botMessage = 'Informasi belum lengkap, mohon sebutkan lokasi atau detail lainnya.';
-            
+
             if (missing.length > 0) {
                 const missingText = missing.map((m: string) => m.charAt(0).toUpperCase() + m.slice(1)).join(', ');
                 botMessage = `Terdapat informasi lokasi yang belum lengkap. Mohon lengkapi bagian berikut: ${missingText}.`;
