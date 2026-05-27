@@ -30,6 +30,7 @@ export function NewTicketModal() {
   const [pesanBot, setPesanBot] = useState<string | null>(null);
   const [missingEntities, setMissingEntities] = useState<string[]>([]);
   const [rawAiResponse, setRawAiResponse] = useState<any>(null);
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
   const startRecording = async () => {
     try {
@@ -42,13 +43,37 @@ export function NewTicketModal() {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         // Create audio file
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         setAudioBlob(blob);
-        // Clear text because we are sending audio instead
-        setReportText("");
         stream.getTracks().forEach((track) => track.stop());
+
+        // Langsung transkripsi untuk preview
+        setIsTranscribing(true);
+        try {
+          const formData = new FormData();
+          formData.append("file", blob, "audio.webm");
+
+          const res = await fetch("/api/ticket/transcribe", {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await res.json();
+          if (res.ok && data.success) {
+            setReportText(prev => prev ? prev + " " + data.text : data.text);
+            setAudioBlob(null); // Clear blob agar dikirim sebagai teks
+          } else {
+            console.error("Transkripsi gagal:", data.error);
+            alert("Gagal melakukan transkripsi suara: " + (data.error || "Unknown error"));
+          }
+        } catch (error) {
+          console.error("Error transcribing:", error);
+          alert("Terjadi kesalahan sistem saat transkripsi suara.");
+        } finally {
+          setIsTranscribing(false);
+        }
       };
 
       mediaRecorder.start();
@@ -203,25 +228,28 @@ export function NewTicketModal() {
                 <Label htmlFor="keluhan">Deskripsi Masalah</Label>
                 
                 <div className="flex items-center gap-2">
-                   {audioBlob && !isRecording && (
-                     <span className="text-xs text-green-600 font-medium">Rekaman tersimpan ✓</span>
-                   )}
                    <Button
                      type="button"
                      variant={isRecording ? "destructive" : "secondary"}
                      size="sm"
                      onClick={toggleRecording}
                      className="h-7 gap-1 px-2 text-xs"
+                     disabled={isTranscribing || isLoading}
                    >
                      {isRecording ? (
                        <>
                          <MicOff className="h-3 w-3 animate-pulse" />
                          Stop Record
                        </>
+                     ) : isTranscribing ? (
+                       <>
+                         <Loader2 className="h-3 w-3 animate-spin" />
+                         Transkripsi...
+                       </>
                      ) : (
                        <>
                          <Mic className="h-3 w-3" />
-                         {audioBlob ? "Rekam Ulang" : "Voice Note"}
+                         Voice Note
                        </>
                      )}
                    </Button>
@@ -238,7 +266,7 @@ export function NewTicketModal() {
                   setReportText(e.target.value);
                   if (audioBlob) setAudioBlob(null); // Batal kirim audio jika user ngetik
                 }}
-                disabled={isRecording || isLoading}
+                disabled={isRecording || isLoading || isTranscribing}
               />
             </div>
           </div>

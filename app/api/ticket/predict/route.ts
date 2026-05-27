@@ -58,59 +58,35 @@ export async function POST(req: NextRequest) {
         // ==========================================
 
         if (aiResponse.status_tiket === 'Open' || aiResponse.is_complete === true) {
-            // SKENARIO A: LENGKAP -> Buka Tiket Resmi
+            // SKENARIO A: LENGKAP -> Simpan ke Tabel Staging (KomplainPerbaikan)
             
-            // Karena ID Aset sesungguhnya akan diinput oleh admin nanti (setelah ditutup),
-            // kita gunakan satu aset penampung (AST-PENDING) agar tidak melanggar Foreign Key DB
-            let pendingAsset = await prisma.masterAsset.findUnique({
-                where: { id: 'AST-PENDING' }
-            });
-
-            if (!pendingAsset) {
-                pendingAsset = await prisma.masterAsset.create({
-                    data: {
-                        id: 'AST-PENDING',
-                        nama: 'Belum Di-assign (Menunggu Admin)',
-                        merek: '-',
-                        model: '-',
-                        kategori: '-',
-                        subKategori: '-',
-                        tipe: '-',
-                        tanggalInstalasi: new Date(),
-                        lokasiGedung: '-',
-                        lokasiLantai: '-',
-                        lokasiZona: '-',
-                        tingkatKekritisan: 'Rendah',
-                        status: 'Aktif',
-                        sisaUmurHari: 0,
-                        estimasiPenggantian: new Date(),
-                        healthStatus: 'Unknown'
-                    }
-                });
+            // Konversi tipe lantai ke Integer (karena NLP mengembalikan string / angka)
+            let lantai = 0;
+            const predLantai = aiResponse.predictions.lokasi_lantai;
+            if (predLantai) {
+                const parsed = parseInt(predLantai, 10);
+                if (!isNaN(parsed)) lantai = parsed;
             }
 
-            const newTicket = await prisma.assetComplaint.create({
+            const newTicket = await prisma.komplainPerbaikan.create({
                 data: {
-                    id: `TKT-${Date.now()}`,
-                    idAset: pendingAsset.id, 
-                    namaAset: aiResponse.predictions.tipe_aset || 'Aset Tidak Diketahui',
-                    kategori: aiResponse.predictions.kategori_dept || 'Unknown',
-                    subKategori: '-',
-                    tipe: aiResponse.predictions.tipe_aset || '-',
-                    tanggalPerencanaan: new Date(),
-                    tanggalPengerjaan: new Date(),
-                    jenisKerusakan: aiResponse.teks_asli,
-                    severity: aiResponse.predictions.severity_awal,
-                    penyebab: 'Menunggu Teknisi',
-                    biayaPerbaikan: 0,
-                    sparePartDigunakan: '-',
-                    statusTiket: 'MENUNGGU_TEKNISI',
+                    id: `STG-${Date.now()}`,
+                    teksKeluhan: aiResponse.teks_asli || '',
+                    predTipeAset: aiResponse.predictions.tipe_aset || 'Unknown',
+                    predLokasiGedung: aiResponse.predictions.lokasi_gedung || '-',
+                    predLokasiLantai: lantai,
+                    predLokasiZona: aiResponse.predictions.lokasi_zona || '-',
+                    predKategoriDept: aiResponse.predictions.kategori_dept || 'Unknown',
+                    predSeverityAwal: aiResponse.predictions.severity_awal || 'Rendah',
+                    isComplete: true,
+                    requiresFollowUp: false,
+                    statusStaging: 'OPEN'
                 }
             });
 
             return NextResponse.json({
                 success: true,
-                message: `Laporan berhasil dibuka dengan Nomor Tiket #${newTicket.id}`,
+                message: `Laporan berhasil masuk ke antrean Staging dengan Nomor Tiket #${newTicket.id}`,
                 data: aiResponse
             });
 
@@ -119,11 +95,20 @@ export async function POST(req: NextRequest) {
             // Opsional: Simpan ke tabel sementara misal `DraftComplaint` (jika ada di schema)
             // await prisma.draftComplaint.create({ ... });
 
+            const missing = aiResponse.missing_fields || [];
+            let botMessage = 'Informasi belum lengkap, mohon sebutkan lokasi atau detail lainnya.';
+            
+            if (missing.length > 0) {
+                const missingText = missing.map((m: string) => m.charAt(0).toUpperCase() + m.slice(1)).join(', ');
+                botMessage = `Terdapat informasi lokasi yang belum lengkap. Mohon lengkapi bagian berikut: ${missingText}.`;
+            }
+
             return NextResponse.json({
                 success: false,
                 is_complete: false,
-                message: aiResponse.pesan_bot || 'Informasi belum lengkap, mohon sebutkan lokasi atau detail lainnya.',
-                missing_entities: aiResponse.missing_entities,
+                requires_follow_up: aiResponse.requires_follow_up || true,
+                missing_fields: missing,
+                message: botMessage,
                 draft_data: aiResponse.predictions,
                 raw_ai_response: aiResponse // Untuk keperluan debugging
             }); // Return 200 OK karena API berhasil memproses, hanya saja data kurang lengkap

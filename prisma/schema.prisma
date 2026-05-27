@@ -76,7 +76,6 @@ model AssetComplaint {
   penyebab            String
   biayaPerbaikan      Int
   sparePartDigunakan  String
-  
   // Relasi ke MasterAsset
   asset               MasterAsset @relation(fields: [idAset], references: [id])
   
@@ -110,3 +109,22 @@ model FrequencyPlan {
   tipe                String
   frekuensi           String
 }
+
+model KomplainPerbaikan {
+  id                  String   @id
+  teksKeluhan         String
+  predTipeAset        String
+  predLokasiGedung    String
+  predLokasiLantai    Int
+  predLokasiZona      String
+  predKategoriDept    String
+  predSeverityAwal    String
+  
+  // Field pendukung
+  missingFields       String?  // JSON string
+  isComplete          Boolean
+  requiresFollowUp    Boolean
+  statusStaging       String   @default("OPEN") // OPEN, DRAFT, ASSIGNED
+  tanggalDibuat       DateTime @default(now())
+}
+
