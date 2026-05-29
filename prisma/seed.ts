@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 // Fungsi bantuan untuk membaca Excel
 function readExcelData(fileName: string) {
-  const filePath = path.resolve(__dirname, '../../exigen-smart-maintenance/data/ntg', fileName);
+  const filePath = path.resolve(__dirname, '../../exigen-smart-maintenance/data', fileName);
   const workbook = xlsx.readFile(filePath);
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
@@ -17,7 +17,7 @@ function readExcelData(fileName: string) {
 // Fungsi bantuan untuk konversi tanggal Excel ke JS Date
 function excelDateToJSDate(excelDate: any) {
   if (!excelDate || excelDate === '-') return new Date();
-  
+
   if (typeof excelDate === 'number') {
     return new Date(Math.round((excelDate - 25569) * 86400 * 1000));
   }
@@ -34,7 +34,7 @@ function excelDateToJSDate(excelDate: any) {
       const month = parseInt(parts[1], 10) - 1; // Bulan 0-indexed di JS
       let year = parseInt(parts[2], 10);
       if (year < 100) year += 2000; // Handle 2-digit years
-      
+
       d = new Date(year, month, day);
     }
   }
@@ -87,7 +87,7 @@ async function main() {
   try {
     console.log('Membaca data Master Asset...');
     const masterAssetsRaw = readExcelData('master_aset_enriched.xlsx') as any[];
-    
+
     const masterAssetData = masterAssetsRaw.map((data) => ({
       id: String(data['id'] || data['ID'] || `AST-TMP-${Math.random().toString(36).substring(7)}`),
       nama: String(data['nama'] || data['Nama'] || '-'),
@@ -109,7 +109,7 @@ async function main() {
 
     const chunks = chunkArray(masterAssetData, BATCH_SIZE);
     let totalInserted = 0;
-    
+
     for (const chunk of chunks) {
       const result = await prisma.masterAsset.createMany({
         data: chunk,
@@ -127,7 +127,7 @@ async function main() {
   try {
     console.log('Membaca data Asset Complaints...');
     const complaintsRaw = readExcelData('aset_komplain_enriched.xlsx') as any[];
-    
+
     const complaintsData = complaintsRaw.map((data) => ({
       id: String(data['id'] || data['ID'] || `CMP-${Math.random().toString(36).substring(7)}`),
       idAset: String(data['idAset'] || data['ID Aset'] || '-'),
@@ -149,7 +149,7 @@ async function main() {
 
     const chunks = chunkArray(complaintsData, BATCH_SIZE);
     let totalInserted = 0;
-    
+
     for (const chunk of chunks) {
       const result = await prisma.assetComplaint.createMany({
         data: chunk,
@@ -167,7 +167,7 @@ async function main() {
   try {
     console.log('Membaca data Replacement History...');
     const replHistoryRaw = readExcelData('riwayat_penggantian_aset.xlsx') as any[];
-    
+
     const replHistoryData = replHistoryRaw.map((data) => ({
       idAsetLama: String(data['idAsetLama'] || data['ID Aset Lama'] || '-'),
       namaAsetLama: String(data['namaAsetLama'] || data['Nama Aset Lama'] || '-'),
@@ -181,7 +181,7 @@ async function main() {
 
     const chunks = chunkArray(replHistoryData, BATCH_SIZE);
     let totalInserted = 0;
-    
+
     for (const chunk of chunks) {
       const result = await prisma.replacementHistory.createMany({
         data: chunk,
@@ -199,7 +199,7 @@ async function main() {
   try {
     console.log('Membaca data Frequency Plans...');
     const freqPlanRaw = readExcelData('rencana_kegiatan_frekuensi_enriched.xlsx') as any[];
-    
+
     const freqPlanData = freqPlanRaw.map((data) => ({
       kategori: String(data['kategori'] || data['Kategori'] || '-'),
       subKategori: String(data['subKategori'] || data['Sub Kategori'] || '-'),
@@ -209,7 +209,7 @@ async function main() {
 
     const chunks = chunkArray(freqPlanData, BATCH_SIZE);
     let totalInserted = 0;
-    
+
     for (const chunk of chunks) {
       const result = await prisma.frequencyPlan.createMany({
         data: chunk,
