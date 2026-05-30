@@ -127,21 +127,72 @@ export async function buatKomplainGuest(
   return { success: true };
 }
 
-// 2. Teknisi: Memilih untuk "Ganti Barang"
-export async function ajukanPenggantian(idTiket: string) {
+// 1.5. Teknisi/Admin: Assign tiket staging NLP ke Aset riil
+export async function assignStagingKeAset(formData: FormData) {
+  const session = await getServerSession(authOptions);
+  if (!session) throw new Error("Unauthorized");
+
+  const idStaging = formData.get("idStaging") as string;
+  const idAset = formData.get("idAset") as string;
+  const idTeknisi = formData.get("idTeknisi") as string;
+
+  if (!idStaging || !idAset || !idTeknisi) throw new Error("Data tidak lengkap");
+
+  const staging = await prisma.komplainPerbaikan.findUnique({ where: { id: idStaging } });
+  if (!staging) throw new Error("Tiket Staging tidak ditemukan");
+
+  const aset = await prisma.masterAsset.findUnique({ where: { id: idAset } });
+  if (!aset) throw new Error("Aset tidak ditemukan");
+
+  // Pindahkan data ke AssetComplaint
+  await prisma.assetComplaint.create({
+    data: {
+      id: `TKT-${Date.now()}`,
+      idAset: aset.id,
+      namaAset: aset.nama,
+      kategori: aset.kategori,
+      subKategori: aset.subKategori,
+      tipe: aset.tipe,
+      tanggalPerencanaan: new Date(),
+      // tanggalPengerjaan akan diisi teknisi nanti
+      jenisKerusakan: staging.teksKeluhan || staging.predTipeAset,
+      severity: staging.predSeverityAwal || "Sedang",
+      penyebab: "-",
+      biayaPerbaikan: 0,
+      sparePartDigunakan: "-",
+      statusTiket: StatusTiket.MENUNGGU_TEKNISI,
+      idTeknisi: idTeknisi,
+    },
+  });
+
+  // Tandai staging sudah di-assign
+  await prisma.komplainPerbaikan.update({
+    where: { id: idStaging },
+    data: { statusStaging: "ASSIGNED" },
+  });
+
+  revalidatePath("/tiket");
+}
+
+// 2. Teknisi: Mengajukan Ganti (Menunggu Persetujuan Manajemen)
+export async function ajukanPenggantian(formData: FormData) {
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== Role.TEKNISI) throw new Error("Unauthorized");
+
+  const idTiket = formData.get("idTiket") as string;
+  const alasan = formData.get("alasan") as string;
 
   await prisma.assetComplaint.update({
     where: { id: idTiket },
     data: {
-      tindakanTeknisi: TindakanTeknisi.GANTI,
       statusTiket: StatusTiket.MENUNGGU_APPROVAL_GANTI,
-      idTeknisi: session.user.id,
+      tindakanTeknisi: TindakanTeknisi.GANTI,
+      penyebab: alasan,
     },
   });
 
   revalidatePath("/teknisi");
+  revalidatePath("/tiket");
   revalidatePath("/manajemen");
 }
 
@@ -156,10 +207,12 @@ export async function mulaiServis(idTiket: string) {
       tindakanTeknisi: TindakanTeknisi.SERVIS,
       statusTiket: StatusTiket.PROSES_SERVIS,
       idTeknisi: session.user.id,
+      tanggalPengerjaan: new Date(),
     },
   });
 
   revalidatePath("/teknisi");
+  revalidatePath("/tiket");
 }
 
 // 4. Manajemen: Approve Penggantian
@@ -169,44 +222,77 @@ export async function approvePenggantian(formData: FormData) {
 
   const idTiket = formData.get("idTiket") as string;
   const idAsetBaru = formData.get("idAsetBaru") as string;
-  const alasan = formData.get("alasan") as string;
+  const merekBaru = formData.get("merek") as string;
+  const modelBaru = formData.get("model") as string;
   const biaya = Number(formData.get("biaya"));
 
-  const tiket = await prisma.assetComplaint.findUnique({ where: { id: idTiket } });
-  if (!tiket) throw new Error("Tiket tidak ditemukan");
-
-  // a. Update status tiket
-  await prisma.assetComplaint.update({
+  const tiket = await prisma.assetComplaint.findUnique({ 
     where: { id: idTiket },
-    data: {
-      statusTiket: StatusTiket.SELESAI,
-      idManajemenApproval: session.user.id,
-      tanggalSelesai: new Date(),
-    },
+    include: { asset: true }
   });
+  if (!tiket || !tiket.asset) throw new Error("Tiket atau Aset tidak ditemukan");
 
-  // b. Tambahkan ke ReplacementHistory
-  await prisma.replacementHistory.create({
-    data: {
-      idAsetLama: tiket.idAset,
-      namaAsetLama: tiket.namaAset,
-      kategori: tiket.kategori,
-      tipe: tiket.tipe,
-      idAsetBaru,
-      tanggalPenggantian: new Date(),
-      alasanPenggantian: alasan,
-      biayaPenggantian: biaya,
-    },
-  });
+  const oldAsset = tiket.asset;
 
-  // c. Update status aset lama menjadi "Non-Aktif"
-  await prisma.masterAsset.update({
-    where: { id: tiket.idAset },
-    data: { status: "Non-Aktif" },
+  // Transaction untuk memastikan keamanan data
+  await prisma.$transaction(async (tx) => {
+    // a. Pensiunkan aset lama
+    await tx.masterAsset.update({
+      where: { id: oldAsset.id },
+      data: { status: "Diganti" },
+    });
+
+    // b. Buat aset baru (mewarisi properti lokasi, tipe, kategori)
+    await tx.masterAsset.create({
+      data: {
+        id: idAsetBaru,
+        nama: oldAsset.nama,
+        merek: merekBaru,
+        model: modelBaru,
+        kategori: oldAsset.kategori,
+        subKategori: oldAsset.subKategori,
+        tipe: oldAsset.tipe,
+        tanggalInstalasi: new Date(),
+        lokasiGedung: oldAsset.lokasiGedung,
+        lokasiLantai: oldAsset.lokasiLantai,
+        lokasiZona: oldAsset.lokasiZona,
+        tingkatKekritisan: oldAsset.tingkatKekritisan,
+        status: "Aktif",
+        sisaUmurHari: oldAsset.sisaUmurHari, // Atau bisa di-reset sesuai standar
+        estimasiPenggantian: oldAsset.estimasiPenggantian, // Atau hitung ulang
+        healthStatus: "Good",
+      }
+    });
+
+    // c. Update status tiket
+    await tx.assetComplaint.update({
+      where: { id: idTiket },
+      data: {
+        statusTiket: StatusTiket.SELESAI,
+        idManajemenApproval: session.user.id,
+        tanggalSelesai: new Date(),
+        biayaPerbaikan: biaya,
+      },
+    });
+
+    // d. Tambahkan ke ReplacementHistory
+    await tx.replacementHistory.create({
+      data: {
+        idAsetLama: oldAsset.id,
+        namaAsetLama: oldAsset.nama,
+        kategori: oldAsset.kategori,
+        tipe: oldAsset.tipe,
+        idAsetBaru: idAsetBaru,
+        tanggalPenggantian: new Date(),
+        alasanPenggantian: tiket.penyebab || "Fatal / Rusak",
+        biayaPenggantian: biaya,
+      },
+    });
   });
 
   revalidatePath("/manajemen");
   revalidatePath("/penggantian");
+  revalidatePath("/aset");
 }
 
 // 5. Manajemen: Reject Penggantian (Kembali ke Teknisi untuk Servis)
@@ -217,14 +303,16 @@ export async function rejectPenggantian(idTiket: string) {
   await prisma.assetComplaint.update({
     where: { id: idTiket },
     data: {
-      statusTiket: StatusTiket.PROSES_SERVIS, // Sesuai kesepakatan, kembali diservis
-      tindakanTeknisi: TindakanTeknisi.SERVIS,
+      statusTiket: StatusTiket.MENUNGGU_TEKNISI,
+      tindakanTeknisi: null,
+      isGantiDitolak: true,
       idManajemenApproval: session.user.id,
     },
   });
 
   revalidatePath("/manajemen");
   revalidatePath("/teknisi");
+  revalidatePath("/tiket");
 }
 
 // 6. Teknisi: Menyelesaikan Servis
@@ -233,22 +321,21 @@ export async function selesaikanServis(formData: FormData) {
   if (session?.user?.role !== Role.TEKNISI) throw new Error("Unauthorized");
 
   const idTiket = formData.get("idTiket") as string;
-  const tanggalPengerjaan = formData.get("tanggalPengerjaan") as string;
-  const tanggalSelesai = formData.get("tanggalSelesai") as string;
   const jenisKerusakan = formData.get("jenisKerusakan") as string;
   const penyebab = formData.get("penyebab") as string;
   const biayaPerbaikan = Number(formData.get("biayaPerbaikan"));
   const sparePartDigunakan = formData.get("sparePartDigunakan") as string;
+  const severity = formData.get("severity") as string; // Severity riil
 
   await prisma.assetComplaint.update({
     where: { id: idTiket },
     data: {
-      tanggalPengerjaan: new Date(tanggalPengerjaan),
-      tanggalSelesai: new Date(tanggalSelesai),
+      tanggalSelesai: new Date(),
       jenisKerusakan,
       penyebab,
       biayaPerbaikan,
       sparePartDigunakan,
+      severity,
       statusTiket: StatusTiket.SELESAI,
     },
   });

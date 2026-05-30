@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,93 +12,178 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mic, MicOff, Plus, FileText } from "lucide-react";
-import { buatTiketOtomatis } from "@/app/actions/ticket";
+import { Mic, MicOff, Plus, FileText, AlertCircle, Loader2 } from "lucide-react";
 
 export function NewTicketModal() {
   const [open, setOpen] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [reportText, setReportText] = useState("");
   
-  const recognitionRef = useRef<any>(null);
+  // Recording states
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
 
-  useEffect(() => {
-    // Initialize speech recognition
-    if (typeof window !== "undefined") {
-      const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = true;
-        recognitionRef.current.interimResults = true;
-        recognitionRef.current.lang = "id-ID";
+  // Form states
+  const [reportText, setReportText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [pesanBot, setPesanBot] = useState<string | null>(null);
+  const [missingEntities, setMissingEntities] = useState<string[]>([]);
+  const [rawAiResponse, setRawAiResponse] = useState<any>(null);
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
-        recognitionRef.current.onresult = (event: any) => {
-          let finalTranscript = "";
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
 
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-              finalTranscript += event.results[i][0].transcript;
-            }
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        // Create audio file
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        setAudioBlob(blob);
+        stream.getTracks().forEach((track) => track.stop());
+
+        // Langsung transkripsi untuk preview
+        setIsTranscribing(true);
+        try {
+          const formData = new FormData();
+          formData.append("file", blob, "audio.webm");
+
+          const res = await fetch("/api/ticket/transcribe", {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await res.json();
+          if (res.ok && data.success) {
+            setReportText(prev => prev ? prev + " " + data.text : data.text);
+            setAudioBlob(null); // Clear blob agar dikirim sebagai teks
+          } else {
+            console.error("Transkripsi gagal:", data.error);
+            alert("Gagal melakukan transkripsi suara: " + (data.error || "Unknown error"));
           }
-          
-          if (finalTranscript) {
-             setReportText((prev) => prev + (prev ? " " : "") + finalTranscript);
-          }
-        };
+        } catch (error) {
+          console.error("Error transcribing:", error);
+          alert("Terjadi kesalahan sistem saat transkripsi suara.");
+        } finally {
+          setIsTranscribing(false);
+        }
+      };
 
-        recognitionRef.current.onerror = (event: any) => {
-          console.error("Speech recognition error", event.error);
-          setIsListening(false);
-        };
-        
-        recognitionRef.current.onend = () => {
-          setIsListening(false);
-        };
-      }
-    }
-  }, []);
-
-  const toggleListening = () => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-    } else {
-      if (!recognitionRef.current) {
-        alert("Browser Anda tidak mendukung fitur Voice to Text.");
-        return;
-      }
-      try {
-        recognitionRef.current.start();
-        setIsListening(true);
-      } catch (e) {
-        console.error(e);
-      }
+      mediaRecorder.start();
+      setIsRecording(true);
+      setPesanBot(null); // Reset alert
+      setMissingEntities([]);
+      setRawAiResponse(null);
+    } catch (err) {
+      console.error("Gagal mengakses mikrofon", err);
+      alert("Tidak dapat mengakses mikrofon. Pastikan Anda telah memberikan izin.");
     }
   };
 
-  const handleSubmit = async (formData: FormData) => {
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setPesanBot(null);
+    setMissingEntities([]);
+    setRawAiResponse(null);
+
     try {
-      await buatTiketOtomatis(formData);
-      setOpen(false);
-      setReportText("");
-      if (isListening) {
-        recognitionRef.current?.stop();
-        setIsListening(false);
+      let res;
+
+      // Jika ada rekaman suara yang belum dikirim
+      if (audioBlob) {
+        const formData = new FormData();
+        // Beri nama file audio.wav agar diterima backend Python (validasi ekstensi)
+        formData.append("file", audioBlob, "audio.wav");
+
+        res = await fetch("/api/ticket/predict", {
+          method: "POST",
+          body: formData,
+        });
+      } else {
+        // Kirim teks murni
+        if (!reportText.trim()) {
+          alert("Silakan ketik keluhan atau rekam suara Anda.");
+          setIsLoading(false);
+          return;
+        }
+
+        res = await fetch("/api/ticket/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ teks_keluhan: reportText }),
+        });
+      }
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        setPesanBot(result.error || result.message || "Gagal menghubungi server. Periksa koneksi ke AI.");
+        setIsLoading(false);
+        return;
+      }
+
+      if (result.success) {
+        // Tiket berhasil dibuka
+        alert(result.message);
+        setOpen(false);
+        resetForm();
+      } else {
+        // Tiket kurang lengkap (Draft)
+        setPesanBot(result.message);
+        setMissingEntities(result.missing_entities || []);
+        if (result.raw_ai_response) setRawAiResponse(result.raw_ai_response);
+        
+        // Jika API mengembalikan teks asli (misal dari transkripsi audio),
+        // letakkan di text area agar user bisa lanjut mengetik tambahannya
+        if (result.draft_data && result.draft_data.teks_asli) {
+           setReportText(result.draft_data.teks_asli);
+           setAudioBlob(null);
+        }
       }
     } catch (error) {
-      console.error("Gagal buat tiket", error);
+      console.error("Error submitting ticket", error);
+      alert("Terjadi kesalahan sistem saat mengirim laporan.");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setReportText("");
+    setAudioBlob(null);
+    setPesanBot(null);
+    setMissingEntities([]);
+    setRawAiResponse(null);
+    if (isRecording) stopRecording();
   };
 
   return (
     <Dialog open={open} onOpenChange={(newOpen) => {
       setOpen(newOpen);
-      if (!newOpen && isListening) {
-        recognitionRef.current?.stop();
-        setIsListening(false);
-      }
+      if (!newOpen) resetForm();
     }}>
       <DialogTrigger asChild>
         <Button size="sm" className="gap-2">
@@ -106,69 +191,94 @@ export function NewTicketModal() {
           <span className="hidden sm:inline">New Ticket</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <form action={handleSubmit}>
+      <DialogContent className="sm:max-w-[500px]">
+        <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Buat Tiket Laporan</DialogTitle>
-            <DialogDescription>
-              Laporkan kerusakan aset. Anda bisa mengetik atau menggunakan suara.
+            <DialogTitle>Buat Tiket Bantuan Pintar</DialogTitle>
+            <DialogDescription className="text-sm">
+              Ceritakan keluhan Anda sejelas mungkin agar teknisi bisa langsung meluncur. 
+              Pastikan Anda menyebutkan: <br />
+              <span className="font-semibold text-primary">1. Benda/Aset yang rusak</span> • 
+              <span className="font-semibold text-primary"> 2. Lokasi Gedung & Lantai</span> • 
+              <span className="font-semibold text-primary"> 3. Ruangan spesifik</span>
             </DialogDescription>
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="idAset">ID Aset</Label>
-              <Input
-                id="idAset"
-                name="idAset"
-                placeholder="Ketik ID Aset (contoh: AST-123...)"
-                required
-              />
-            </div>
+            
+            {/* Pesan Peringatan Bot (Jika is_complete false) */}
+            {pesanBot && (
+              <div className="bg-destructive/15 text-destructive p-3 rounded-md flex items-start gap-3 text-sm">
+                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-1 w-full overflow-hidden">
+                  <p className="font-medium">{pesanBot}</p>
+                  {missingEntities.length > 0 && (
+                    <ul className="list-disc pl-4 text-xs opacity-90">
+                      {missingEntities.map((ent, idx) => (
+                        <li key={idx}>Mohon lengkapi info: <span className="font-semibold">{ent}</span></li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="grid gap-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="report">Deskripsi Kerusakan</Label>
-                <Button
-                  type="button"
-                  variant={isListening ? "destructive" : "secondary"}
-                  size="sm"
-                  onClick={toggleListening}
-                  className="h-7 gap-1 px-2 text-xs"
-                >
-                  {isListening ? (
-                    <>
-                      <MicOff className="h-3 w-3 animate-pulse" />
-                      Stop Record
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="h-3 w-3" />
-                      Voice Input
-                    </>
-                  )}
-                </Button>
+                <Label htmlFor="keluhan">Deskripsi Masalah</Label>
+                
+                <div className="flex items-center gap-2">
+                   <Button
+                     type="button"
+                     variant={isRecording ? "destructive" : "secondary"}
+                     size="sm"
+                     onClick={toggleRecording}
+                     className="h-7 gap-1 px-2 text-xs"
+                     disabled={isTranscribing || isLoading}
+                   >
+                     {isRecording ? (
+                       <>
+                         <MicOff className="h-3 w-3 animate-pulse" />
+                         Stop Record
+                       </>
+                     ) : isTranscribing ? (
+                       <>
+                         <Loader2 className="h-3 w-3 animate-spin" />
+                         Transkripsi...
+                       </>
+                     ) : (
+                       <>
+                         <Mic className="h-3 w-3" />
+                         Voice Note
+                       </>
+                     )}
+                   </Button>
+                </div>
               </div>
+              
               <Textarea
                 id="keluhan"
                 name="keluhan"
-                placeholder="Deskripsikan masalah yang terjadi pada aset..."
-                className="min-h-[150px]"
+                placeholder="Contoh: AC split di ruang HRD gedung utama lantai 2 bocor parah netes air..."
+                className="min-h-[120px]"
                 value={reportText}
-                onChange={(e) => setReportText(e.target.value)}
-                required
+                onChange={(e) => {
+                  setReportText(e.target.value);
+                  if (audioBlob) setAudioBlob(null); // Batal kirim audio jika user ngetik
+                }}
+                disabled={isRecording || isLoading || isTranscribing}
               />
-              {isListening && (
-                <p className="text-[10px] text-muted-foreground animate-pulse text-right">
-                  Mendengarkan suara Anda...
-                </p>
-              )}
             </div>
           </div>
 
           <DialogFooter>
-            <Button type="submit" className="gap-2">
-              <FileText className="h-4 w-4" />
-              Kirim Laporan
+            <Button type="submit" disabled={isLoading || isRecording} className="gap-2 w-full sm:w-auto">
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4" />
+              )}
+              {isLoading ? "Memproses AI..." : "Kirim Laporan"}
             </Button>
           </DialogFooter>
         </form>
