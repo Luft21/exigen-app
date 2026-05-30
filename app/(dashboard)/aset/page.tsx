@@ -1,5 +1,7 @@
 import { AssetTable } from "@/components/asset-table";
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export const metadata = {
   title: "Daftar Aset",
@@ -12,6 +14,9 @@ export default async function AsetPage({
 }: {
   searchParams: Promise<{ page?: string; q?: string; category?: string; status?: string }>;
 }) {
+  const session = await getServerSession(authOptions);
+  const isTeknisi = session?.user?.role === "TEKNISI";
+
   const params = await searchParams;
   const page = parseInt(params.page || "1", 10);
   const pageSize = 100; // Tampilkan 100 aset per halaman
@@ -69,13 +74,13 @@ export default async function AsetPage({
         </p>
       </div>
       
-      <AssetTable 
-        initialAssets={assets as any[]} 
+      <AssetTable
+        initialAssets={assets as any[]}
         categories={categories}
-        locations={locations}
         currentPage={page}
         totalPages={totalPages}
         searchParams={params}
+        isTeknisi={isTeknisi}
       />
     </div>
   );

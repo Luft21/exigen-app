@@ -21,34 +21,34 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+// Aset dengan sisa umur di bawah threshold ini mendapat tombol Edit (Perbaiki)
+const EDIT_THRESHOLD = 90;
 
 interface AssetTableProps {
   initialAssets: any[];
   categories: string[];
-  locations: string[];
   currentPage: number;
   totalPages: number;
   searchParams: any;
+  isTeknisi?: boolean;
 }
 
-export function AssetTable({ 
-  initialAssets, 
-  categories, 
-  locations, 
-  currentPage, 
+export function AssetTable({
+  initialAssets,
+  categories,
+  currentPage,
   totalPages,
-  searchParams 
+  searchParams,
+  isTeknisi = false,
 }: AssetTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParamsHook = useSearchParams();
-
-  // Local state untuk Input (agar tidak terlalu banyak re-render/request saat mengetik)
   const [searchValue, setSearchValue] = useState(searchParams.q || "");
 
-  // Fungsi untuk update URL query params
   const updateQuery = (key: string, value: string) => {
     const params = new URLSearchParams(searchParamsHook.toString());
     if (value && value !== "all") {
@@ -56,25 +56,19 @@ export function AssetTable({
     } else {
       params.delete(key);
     }
-    
-    // Reset ke page 1 jika mengganti filter
-    if (key !== 'page') {
-      params.set('page', '1');
-    }
-
+    if (key !== "page") params.set("page", "1");
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = (e: { preventDefault(): void }) => {
     e.preventDefault();
     updateQuery("q", searchValue);
   };
 
-  const umurHariNow = (tanggalInstalasi: Date) => {
-    const inst = new Date(tanggalInstalasi).getTime();
-    const now = new Date().getTime();
-    return Math.floor((now - inst) / (1000 * 60 * 60 * 24));
-  };
+  const umurHariNow = (tanggalInstalasi: Date) =>
+    Math.floor((Date.now() - new Date(tanggalInstalasi).getTime()) / 86_400_000);
+
+  const hasEditCol = isTeknisi;
 
   return (
     <Card className="animate-fade-in-up" style={{ animationDelay: "200ms" }}>
@@ -91,18 +85,17 @@ export function AssetTable({
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               className="pl-9 h-9 text-sm"
-              id="asset-search"
             />
             <Button type="submit" size="sm" variant="secondary" className="h-9">
               Cari
             </Button>
           </div>
-          
-          <Select 
-            value={searchParams.category || "all"} 
+
+          <Select
+            value={searchParams.category || "all"}
             onValueChange={(val) => updateQuery("category", val)}
           >
-            <SelectTrigger className="w-[150px] h-9 text-sm" id="filter-kategori">
+            <SelectTrigger className="w-[150px] h-9 text-sm">
               <SelectValue placeholder="Kategori" />
             </SelectTrigger>
             <SelectContent>
@@ -113,11 +106,11 @@ export function AssetTable({
             </SelectContent>
           </Select>
 
-          <Select 
-            value={searchParams.status || "all"} 
+          <Select
+            value={searchParams.status || "all"}
             onValueChange={(val) => updateQuery("status", val)}
           >
-            <SelectTrigger className="w-[150px] h-9 text-sm" id="filter-status">
+            <SelectTrigger className="w-[150px] h-9 text-sm">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -129,6 +122,14 @@ export function AssetTable({
             </SelectContent>
           </Select>
         </form>
+
+        {/* Hint untuk teknisi */}
+        {isTeknisi && (
+          <p className="mb-3 text-xs text-muted-foreground flex items-center gap-1.5">
+            <Wrench className="h-3 w-3 shrink-0" />
+            Tombol <strong>Perbaiki</strong> muncul pada aset dengan sisa umur ≤ {EDIT_THRESHOLD} hari.
+          </p>
+        )}
 
         {/* Table */}
         <div className="rounded-lg border overflow-x-auto">
@@ -142,32 +143,81 @@ export function AssetTable({
                 <TableHead className="text-right">Umur Skrg</TableHead>
                 <TableHead className="text-right">Sisa Umur</TableHead>
                 <TableHead>Status</TableHead>
+                {hasEditCol && <TableHead className="w-[100px]" />}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {initialAssets.map((a) => (
-                <TableRow
-                  key={a.id}
-                  className="cursor-pointer transition-colors hover:bg-muted/50"
-                >
-                  <TableCell className="font-heading text-xs">
-                    <Link href={`/aset/${a.id}`} className="hover:underline text-primary">
-                      {a.id}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="font-medium text-sm">{a.nama}</TableCell>
-                  <TableCell className="hidden md:table-cell text-xs text-muted-foreground">{a.kategori}</TableCell>
-                  <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">{a.lokasiGedung}</TableCell>
-                  <TableCell className="text-right font-heading text-xs">{umurHariNow(a.tanggalInstalasi)} hari</TableCell>
-                  <TableCell className="text-right font-heading text-xs font-semibold">{a.sisaUmurHari} hari</TableCell>
-                  <TableCell>
-                    <StatusBadge status={a.healthStatus} />
-                  </TableCell>
-                </TableRow>
-              ))}
+              {initialAssets.map((a) => {
+                const canEdit = isTeknisi && a.sisaUmurHari <= EDIT_THRESHOLD;
+                const isCritical = a.sisaUmurHari <= 30;
+
+                return (
+                  <TableRow
+                    key={a.id}
+                    className={`transition-colors hover:bg-muted/50 ${
+                      isCritical ? "bg-destructive/5 hover:bg-destructive/10" : ""
+                    }`}
+                  >
+                    <TableCell className="font-heading text-xs">
+                      <Link
+                        href={`/aset/${a.id}`}
+                        className="hover:underline text-primary"
+                      >
+                        {a.id}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="font-medium text-sm">{a.nama}</TableCell>
+                    <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                      {a.kategori}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
+                      {a.lokasiGedung}
+                    </TableCell>
+                    <TableCell className="text-right font-heading text-xs">
+                      {umurHariNow(a.tanggalInstalasi)} hari
+                    </TableCell>
+                    <TableCell
+                      className={`text-right font-heading text-xs font-semibold ${
+                        isCritical
+                          ? "text-destructive"
+                          : a.sisaUmurHari <= EDIT_THRESHOLD
+                          ? "text-warning"
+                          : ""
+                      }`}
+                    >
+                      {a.sisaUmurHari} hari
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={a.healthStatus} />
+                    </TableCell>
+                    {hasEditCol && (
+                      <TableCell>
+                        {canEdit ? (
+                          <Link
+                            href={`/aset/${a.id}/edit`}
+                            className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium border transition-colors ${
+                              isCritical
+                                ? "text-destructive border-destructive/30 hover:bg-destructive/10"
+                                : "text-warning border-warning/30 hover:bg-warning/10"
+                            }`}
+                          >
+                            <Wrench className="h-3 w-3 shrink-0" />
+                            Perbaiki
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-muted-foreground/30">—</span>
+                        )}
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
               {initialAssets.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell
+                    colSpan={hasEditCol ? 8 : 7}
+                    className="text-center text-muted-foreground py-8"
+                  >
                     Tidak ada aset ditemukan.
                   </TableCell>
                 </TableRow>
@@ -183,17 +233,17 @@ export function AssetTable({
               Halaman {currentPage} dari {totalPages}
             </span>
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => updateQuery("page", String(currentPage - 1))}
                 disabled={currentPage <= 1}
               >
                 <ChevronLeft className="h-4 w-4 mr-1" /> Prev
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => updateQuery("page", String(currentPage + 1))}
                 disabled={currentPage >= totalPages}
               >
