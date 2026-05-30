@@ -3,6 +3,8 @@
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Activity, ArrowLeft, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,7 +13,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
@@ -23,76 +25,97 @@ export default function LoginPage() {
     });
 
     if (res?.error) {
-      setError("Username atau password salah!");
+      setError("Incorrect username or password.");
       setIsLoading(false);
     } else {
-      // Karena kita pakai Next.js Route Group, halamannya ada di '/' bukan '/dashboard'
-      router.push("/");
+      router.push("/dashboard");
       router.refresh();
     }
   };
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-100 dark:bg-zinc-900">
-      <div className="w-full max-w-md space-y-8 rounded-xl bg-white p-8 shadow-lg dark:bg-zinc-800">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Exigen Login
-          </h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Masuk dengan akun Manajemen atau Teknisi Anda
-          </p>
+    <div className="min-h-dvh flex items-center justify-center bg-[hsl(223,64%,8%)] text-white relative overflow-hidden px-4 py-12">
+      {/* Glow centered behind the card */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(560px,100vw)] aspect-square rounded-full bg-[hsl(210,53%,22%)] blur-[100px] opacity-35" />
+      </div>
+
+      {/* Single centered column — logo → title → form → footer */}
+      <div className="relative z-10 w-full max-w-sm">
+
+        {/* Logo + heading */}
+        <div className="mb-8 flex flex-col items-center text-center">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[hsl(210,45%,43%)]">
+            <Activity className="h-6 w-6 text-white" />
+          </div>
+          <h1 className="font-heading text-xl font-bold">Sign in to Exigen</h1>
+          <p className="mt-1.5 text-sm text-white/40">For Management and Technicians</p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="rounded-md bg-red-50 p-4 text-sm text-red-500 dark:bg-red-900/30">
-              {error}
-            </div>
-          )}
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Username
-              </label>
+        {/* Form card */}
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            {error && (
+              <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-white/60">Username</label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-white"
-                placeholder="Masukkan username"
+                placeholder="Enter username"
                 required
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-white/20 transition-colors focus:border-[hsl(210,45%,43%)] focus:outline-none focus:ring-1 focus:ring-[hsl(210,45%,43%)]/40"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Password
-              </label>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-white/60">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-white"
                 placeholder="••••••••"
                 required
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-white/20 transition-colors focus:border-[hsl(210,45%,43%)] focus:outline-none focus:ring-1 focus:ring-[hsl(210,45%,43%)]/40"
               />
             </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="flex w-full justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-blue-400 dark:focus:ring-offset-zinc-800"
-          >
-            {isLoading ? "Memproses..." : "Masuk"}
-          </button>
-        </form>
-        
-        <div className="text-center text-xs text-gray-500 dark:text-zinc-500">
-          Akun Default: admin / password123 | teknisi1 / password123
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="mt-1 flex w-full items-center justify-center gap-2 rounded-lg bg-[hsl(210,45%,43%)] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[hsl(210,45%,38%)] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </button>
+          </form>
         </div>
+
+        {/* Footer row — demo hint + back link */}
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-[11px] text-white/25">
+            Demo: admin / password123
+          </p>
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 text-xs text-white/40 transition-colors hover:text-white/70"
+          >
+            <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+            Back
+          </Link>
+        </div>
+
       </div>
     </div>
   );

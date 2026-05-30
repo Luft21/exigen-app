@@ -6,20 +6,22 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
-    // Proteksi untuk role Manajemen
     if (path.startsWith("/manajemen") && token?.role !== "MANAJEMEN") {
-      return NextResponse.redirect(new URL("/", req.url));
+      return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
-    // Proteksi untuk role Teknisi (Asumsi halaman teknisi ada di /teknisi)
     if (path.startsWith("/teknisi") && token?.role !== "TEKNISI") {
-      return NextResponse.redirect(new URL("/", req.url));
+      return NextResponse.redirect(new URL("/dashboard", req.url));
     }
   },
   {
     callbacks: {
-      // Middleware hanya berjalan jika token ada
-      authorized: ({ token }) => !!token,
+      authorized: ({ token, req }) => {
+        const path = req.nextUrl.pathname;
+        // Rute publik: landing page dan halaman komplain guest
+        if (path === "/" || path.startsWith("/komplain")) return true;
+        return !!token;
+      },
     },
     pages: {
       signIn: "/login",
@@ -28,7 +30,6 @@ export default withAuth(
 );
 
 export const config = {
-  // Semua halaman diproteksi kecuali api, _next/static, login, dan asset public
   matcher: [
     "/((?!api|_next/static|_next/image|favicon.ico|login|public).*)",
   ],

@@ -66,6 +66,67 @@ export async function buatTiketOtomatis(formData: FormData) {
   revalidatePath("/teknisi");
 }
 
+// 1b. Guest: Membuat komplain tanpa login & tanpa ID Aset
+export async function buatKomplainGuest(
+  _prevState: { success: boolean; error?: string },
+  formData: FormData
+): Promise<{ success: boolean; error?: string }> {
+  const keluhan = (formData.get("keluhan") as string)?.trim();
+
+  if (!keluhan || keluhan.length < 20) {
+    return { success: false, error: "Deskripsi terlalu singkat. Jelaskan nama barang, gedung, dan lantai." };
+  }
+
+  let kategori = "Umum";
+  let severity = "Sedang";
+  let saranSistem = "Ditangani teknisi";
+  const rawId = `CMP-GUEST-${Math.random().toString(36).substring(7)}`;
+
+  try {
+    const aiResponse = await fetch("http://127.0.0.1:8000/predict/ticket", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id_laporan: rawId, teks_keluhan: keluhan }),
+    });
+
+    if (aiResponse.ok) {
+      const aiData = await aiResponse.json();
+      const prediksi = aiData.hasil_prediksi_ai;
+      kategori = prediksi.kategori_departemen || kategori;
+      severity = prediksi.tingkat_severity || severity;
+      saranSistem = aiData.saran_tindakan_sistem || saranSistem;
+    }
+  } catch {
+    // FastAPI opsional — lanjut tanpa prediksi AI
+  }
+
+  try {
+    await prisma.assetComplaint.create({
+      data: {
+        id: rawId,
+        idAset: null,
+        namaAset: keluhan.substring(0, 50).trimEnd(),
+        kategori,
+        subKategori: "-",
+        tipe: "-",
+        tanggalPerencanaan: new Date(),
+        tanggalPengerjaan: new Date(),
+        jenisKerusakan: keluhan.substring(0, 50),
+        severity,
+        penyebab: `AI: ${saranSistem}`,
+        biayaPerbaikan: 0,
+        sparePartDigunakan: "-",
+        statusTiket: StatusTiket.MENUNGGU_TEKNISI,
+      },
+    });
+  } catch {
+    return { success: false, error: "Gagal menyimpan laporan. Silakan coba lagi." };
+  }
+
+  revalidatePath("/teknisi");
+  return { success: true };
+}
+
 // 2. Teknisi: Memilih untuk "Ganti Barang"
 export async function ajukanPenggantian(idTiket: string) {
   const session = await getServerSession(authOptions);

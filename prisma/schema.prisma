@@ -63,7 +63,7 @@ model MasterAsset {
 
 model AssetComplaint {
   id                  String   @id
-  idAset              String
+  idAset              String?
   namaAset            String
   kategori            String
   subKategori         String
@@ -76,9 +76,9 @@ model AssetComplaint {
   penyebab            String
   biayaPerbaikan      Int
   sparePartDigunakan  String
-  
-  // Relasi ke MasterAsset
-  asset               MasterAsset @relation(fields: [idAset], references: [id])
+
+  // Relasi ke MasterAsset (optional untuk guest complaint)
+  asset               MasterAsset? @relation(fields: [idAset], references: [id])
   
   // Field Tambahan Workflow
   statusTiket         StatusTiket @default(MENUNGGU_TEKNISI)

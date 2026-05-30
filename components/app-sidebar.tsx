@@ -10,7 +10,6 @@ import {
   RefreshCw,
   Activity,
   Ticket,
-  MessageSquareWarning,
   LogOut,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
@@ -27,7 +26,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const navItems = [
-  { title: "Overview", href: "/", icon: LayoutDashboard },
+  { title: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { title: "Tiket Komplain", href: "/tiket", icon: Ticket },
   { title: "Aset", href: "/aset", icon: Box },
   { title: "Maintenance", href: "/maintenance", icon: Wrench },
@@ -40,7 +39,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" variant="sidebar">
       <SidebarHeader className="border-b border-sidebar-border px-4 py-5">
-        <Link href="/" className="flex items-center gap-3 group">
+        <Link href="/dashboard" className="flex items-center gap-3 group">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm transition-transform group-hover:scale-105">
             <Activity className="h-5 w-5" />
           </div>
@@ -63,8 +62,8 @@ export function AppSidebar() {
           <SidebarMenu className="gap-1 px-1">
             {navItems.map((item) => {
               const isActive =
-                item.href === "/"
-                  ? pathname === "/"
+                item.href === "/dashboard"
+                  ? pathname === "/dashboard"
                   : pathname.startsWith(item.href);
               return (
                 <SidebarMenuItem key={item.href}>

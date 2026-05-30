@@ -1,13 +1,42 @@
 import { PrismaClient, Role, StatusTiket, TindakanTeknisi } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import * as xlsx from 'xlsx';
+import * as fs from 'fs';
 import * as path from 'path';
 
 const prisma = new PrismaClient();
 
+function getSeedDataDirectory() {
+  const envDir = process.env.SEED_DATA_DIR;
+  if (envDir && fs.existsSync(envDir)) {
+    return path.resolve(envDir);
+  }
+
+  const repoDir = path.resolve(__dirname, '../data/ntg');
+  if (fs.existsSync(repoDir)) {
+    return repoDir;
+  }
+
+  const legacyDir = path.resolve(__dirname, '../../exigen-smart-maintenance/data/ntg');
+  if (fs.existsSync(legacyDir)) {
+    return legacyDir;
+  }
+
+  return repoDir;
+}
+
 // Fungsi bantuan untuk membaca Excel
 function readExcelData(fileName: string) {
-  const filePath = path.resolve(__dirname, '../../exigen-smart-maintenance/data/ntg', fileName);
+  const dataDir = getSeedDataDirectory();
+  const filePath = path.resolve(dataDir, fileName);
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error(
+      `File seed tidak ditemukan: ${filePath}. ` +
+      `Atur SEED_DATA_DIR jika data berada di lokasi lain.`
+    );
+  }
+
   const workbook = xlsx.readFile(filePath);
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
