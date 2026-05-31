@@ -21,6 +21,13 @@ export default async function TeknisiDashboard() {
     orderBy: { tanggalPerencanaan: "desc" },
   });
 
+  const tiketIds = tiketBaru.map((t) => t.id);
+  const linkedStaging = await prisma.komplainPerbaikan.findMany({
+    where: { id: { in: tiketIds } },
+    select: { id: true, teksKeluhan: true },
+  });
+  const stagingMap = new Map(linkedStaging.map((s) => [s.id, s.teksKeluhan]));
+
   return (
     <div className="space-y-6">
       <div>
@@ -47,13 +54,13 @@ export default async function TeknisiDashboard() {
                     {tiket.tanggalPerencanaan.toLocaleDateString("id-ID")}
                   </span>
                 </div>
-                <CardTitle className="text-base mt-2">{tiket.namaAset}</CardTitle>
-                <p className="text-xs text-muted-foreground">ID Aset: {tiket.idAset}</p>
+                <CardTitle className="text-base mt-2">{tiket.tipe || "Aset"}</CardTitle>
+                <p className="text-xs text-muted-foreground">{tiket.namaAset} (ID: {tiket.idAset})</p>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col">
                 <div className="bg-muted/50 p-3 rounded-md text-sm mb-4 flex-1">
-                  <span className="font-semibold block mb-1">Keluhan:</span>
-                  {tiket.jenisKerusakan}
+                  <span className="font-semibold block mb-1">Keluhan (Laporan Awal):</span>
+                  {stagingMap.get(tiket.id) || "-"}
                 </div>
 
                 <div className="flex gap-2 mt-auto">
@@ -66,7 +73,9 @@ export default async function TeknisiDashboard() {
                   </form>
                   
                   {/* Form untuk action Ganti Barang */}
-                  <form action={ajukanPenggantian.bind(null, tiket.id)} className="flex-1">
+                  <form action={ajukanPenggantian} className="flex-1">
+                    <input type="hidden" name="idTiket" value={tiket.id} />
+                    <input type="hidden" name="alasan" value="Pengajuan dari Dashboard Teknisi" />
                     <button className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white rounded-md py-2 text-sm font-medium transition-colors">
                       <Replace className="h-4 w-4" />
                       Ganti

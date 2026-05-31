@@ -74,9 +74,9 @@ export default async function PenggantianPage({
               <TableHeader>
                 <TableRow className="hover:bg-transparent bg-muted/60">
                   <TableHead className="text-xs">ID Lama</TableHead>
-                  <TableHead className="text-xs">Nama Aset Lama</TableHead>
+                  <TableHead className="text-xs">Tipe Aset</TableHead>
                   <TableHead className="text-xs">Kategori</TableHead>
-                  <TableHead className="text-xs">Tipe</TableHead>
+                  <TableHead className="text-xs">Nama Aset Lama</TableHead>
                   <TableHead className="text-xs text-center">→</TableHead>
                   <TableHead className="text-xs">ID Baru</TableHead>
                   <TableHead className="text-xs">Tanggal</TableHead>
@@ -88,9 +88,9 @@ export default async function PenggantianPage({
                 {replacementHistoryDb.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell className="font-heading text-xs">{r.idAsetLama}</TableCell>
-                    <TableCell className="text-xs font-medium">{r.namaAsetLama}</TableCell>
+                    <TableCell className="text-xs font-medium">{r.tipe}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{r.kategori}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{r.tipe}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{r.namaAsetLama}</TableCell>
                     <TableCell className="text-center">
                       <ArrowRight className="h-3.5 w-3.5 text-accent-custom mx-auto" />
                     </TableCell>

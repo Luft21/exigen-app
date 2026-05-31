@@ -33,9 +33,10 @@ export const authOptions: NextAuthOptions = {
         return {
           id: user.id,
           name: user.nama,
+          nama: user.nama,
           username: user.username,
           role: user.role,
-        };
+        } as any;
       },
     }),
   ],

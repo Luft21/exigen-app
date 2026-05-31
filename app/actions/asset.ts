@@ -74,3 +74,55 @@ export async function perbaikiAset(formData: FormData) {
   revalidatePath("/tiket");
   redirect("/maintenance");
 }
+
+export async function searchAssetsForStaging(staging: any, searchKeyword: string = "") {
+  // Ambil data aset, jika search tidak kosong gunakan filter
+  const q = searchKeyword.toLowerCase();
+  
+  const assets = await prisma.masterAsset.findMany({
+    where: {
+      status: "Aktif",
+      ...(q ? {
+        OR: [
+          { nama: { contains: q } },
+          { id: { contains: q } },
+          { lokasiGedung: { contains: q } },
+        ]
+      } : {})
+    },
+    select: {
+      id: true,
+      nama: true,
+      kategori: true,
+      tipe: true,
+      lokasiGedung: true,
+      lokasiLantai: true,
+      lokasiZona: true,
+    }
+  });
+
+  // Hitung skor mirip seperti sebelumnya
+  const scoredAssets = assets.map(a => {
+    let score = 0;
+    const tAset = (staging.predTipeAset || "").toLowerCase();
+    const aTipe = (a.tipe || "").toLowerCase();
+    const aKat = (a.kategori || "").toLowerCase();
+    
+    if (aTipe.includes(tAset) || tAset.includes(aTipe)) score += 50;
+    else if (aKat.includes(tAset) || tAset.includes(aKat)) score += 20;
+
+    if (a.lokasiGedung.toLowerCase() === (staging.predLokasiGedung || "").toLowerCase()) score += 30;
+    
+    const tLantai = (staging.predLokasiLantai || "").toLowerCase();
+    const aLantai = (a.lokasiLantai || "").toLowerCase();
+    if (tLantai === aLantai || tLantai.includes(aLantai) || aLantai.includes(tLantai)) score += 15;
+
+    const tZona = (staging.predLokasiZona || "").toLowerCase();
+    const aZona = (a.lokasiZona || "").toLowerCase();
+    if (tZona === aZona || tZona.includes(aZona) || aZona.includes(tZona)) score += 10;
+
+    return { ...a, score };
+  }).sort((a, b) => b.score - a.score);
+
+  return scoredAssets.slice(0, 15);
+}

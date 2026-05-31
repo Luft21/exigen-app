@@ -51,6 +51,13 @@ export default async function MaintenancePage({
     prisma.assetComplaint.count(),
   ]);
 
+  const complaintIds = assetComplaintsDb.map((c) => c.id);
+  const linkedStaging = await prisma.komplainPerbaikan.findMany({
+    where: { id: { in: complaintIds } },
+    select: { id: true, teksKeluhan: true },
+  });
+  const stagingMap = new Map(linkedStaging.map((s) => [s.id, s.teksKeluhan]));
+
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
@@ -78,6 +85,7 @@ export default async function MaintenancePage({
                   <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Tgl Perencanaan</th>
                   <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Tgl Pengerjaan</th>
                   <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Tgl Selesai</th>
+                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Keluhan Awal</th>
                   <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Jenis Kerusakan</th>
                   <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Severity</th>
                   <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Penyebab</th>
@@ -99,7 +107,8 @@ export default async function MaintenancePage({
                     <td className="p-4 align-middle whitespace-nowrap text-xs">{formatDate(c.tanggalPerencanaan)}</td>
                     <td className="p-4 align-middle whitespace-nowrap text-xs">{formatDate(c.tanggalPengerjaan)}</td>
                     <td className="p-4 align-middle whitespace-nowrap text-xs">{formatDate(c.tanggalSelesai)}</td>
-                    <td className="p-4 align-middle whitespace-nowrap text-xs font-medium">{c.jenisKerusakan}</td>
+                    <td className="p-4 align-middle whitespace-nowrap text-xs max-w-[150px] truncate" title={stagingMap.get(c.id) || "-"}>{stagingMap.get(c.id) || "-"}</td>
+                    <td className="p-4 align-middle whitespace-nowrap text-xs font-medium max-w-[150px] truncate" title={c.jenisKerusakan}>{c.jenisKerusakan}</td>
                     <td className="p-4 align-middle whitespace-nowrap">
                       <Badge variant="outline" className={`text-[9px] ${severityColor[c.severity]}`}>
                         {c.severity}

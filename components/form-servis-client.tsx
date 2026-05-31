@@ -68,12 +68,12 @@ export function FormServisClient({
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="grid gap-2">
-          <Label>ID Aset</Label>
-          <Input value={tiket.idAset} readOnly className="bg-muted/40" />
+          <Label>Tipe Aset</Label>
+          <Input value={tiket.tipe || tiket.namaAset} readOnly className="bg-muted/40 font-medium" />
         </div>
         <div className="grid gap-2">
-          <Label>Nama Aset</Label>
-          <Input value={tiket.namaAset} readOnly className="bg-muted/40" />
+          <Label>Nama / ID Aset</Label>
+          <Input value={`${tiket.namaAset} (${tiket.idAset})`} readOnly className="bg-muted/40 text-xs" />
         </div>
       </div>
 
@@ -89,6 +89,11 @@ export function FormServisClient({
         <p className="text-xs text-muted-foreground pt-2 border-t mt-2">
           * Waktu penyelesaian akan dicatat secara otomatis ketika Anda menekan tombol simpan.
         </p>
+      </div>
+
+      <div className="grid gap-2">
+        <Label>Keluhan Awal (Laporan User / NLP)</Label>
+        <Input value={tiket.keluhan} readOnly className="bg-muted/40 font-medium" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
