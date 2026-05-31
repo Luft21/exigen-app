@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MessageSquareWarning, Database } from "lucide-react";
-import { buatTiketOtomatis } from "@/app/actions/ticket";
+import { NewTicketClient } from "@/components/new-ticket-client";
 
 export const metadata = {
   title: "New Ticket",
@@ -42,36 +42,7 @@ export default function NewTicketPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Gunakan Server Action langsung di form */}
-          <form action={buatTiketOtomatis} className="space-y-6">
-            <div className="grid gap-2">
-              <Label htmlFor="idAset">ID Aset</Label>
-              <Input
-                id="idAset"
-                name="idAset"
-                placeholder="Ketik ID Aset (contoh: AST-TMP-xyz...)"
-                required
-              />
-              <p className="text-[10px] text-muted-foreground">
-                (Dalam versi produksi sebetulnya bisa pakai fitur pencarian/autocomplete via API)
-              </p>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="keluhan">Deskripsi Keluhan</Label>
-              <Textarea
-                id="keluhan"
-                name="keluhan"
-                placeholder="Tuliskan secara detail gejala kerusakannya..."
-                className="min-h-[120px]"
-                required
-              />
-            </div>
-
-            <Button type="submit" className="w-full sm:w-auto">
-              Kirim Laporan
-            </Button>
-          </form>
+          <NewTicketClient />
         </CardContent>
       </Card>
     </div>

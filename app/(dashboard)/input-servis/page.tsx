@@ -28,6 +28,7 @@ const initialForm = {
   tanggalPerencanaan: "",
   tanggalPengerjaan: "",
   tanggalSelesai: "",
+  keluhan: "",
   jenisKerusakan: "",
   severity: "",
   penyebab: "",
@@ -127,19 +128,27 @@ export default function InputServisPage() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="namaAset">Nama Aset</Label>
+                <Label htmlFor="tipe">Tipe Aset</Label>
                 <Input
-                  id="namaAset"
+                  id="tipe"
                   placeholder="Otomatis terisi saat memilih ID Aset"
-                  value={form.namaAset}
+                  value={form.tipe}
                   readOnly
-                  className="bg-muted/40"
+                  className="bg-muted/40 font-medium"
                 />
               </div>
             </div>
 
             {/* Row 2: Kategori, Sub Kategori, Tipe */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="namaAset">Nama Aset</Label>
+                <Input
+                  value={form.namaAset}
+                  readOnly
+                  className="bg-muted/40 text-xs"
+                />
+              </div>
               <div className="grid gap-2">
                 <Label htmlFor="kategori">Kategori</Label>
                 <Input
@@ -156,16 +165,6 @@ export default function InputServisPage() {
                   id="subKategori"
                   placeholder="—"
                   value={form.subKategori}
-                  readOnly
-                  className="bg-muted/40"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="tipe">Tipe</Label>
-                <Input
-                  id="tipe"
-                  placeholder="—"
-                  value={form.tipe}
                   readOnly
                   className="bg-muted/40"
                 />
@@ -212,13 +211,25 @@ export default function InputServisPage() {
               </div>
             </div>
 
-            {/* Row 4: Jenis Kerusakan & Severity */}
+            {/* Row 4: Keluhan & Jenis Kerusakan */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="jenisKerusakan">Jenis Kerusakan</Label>
-                <Input
+                <Label htmlFor="keluhan">Keluhan Awal</Label>
+                <Textarea
+                  id="keluhan"
+                  placeholder="Contoh: AC bocor netes air..."
+                  value={form.keluhan}
+                  onChange={(e) =>
+                    handleChange("keluhan", e.target.value)
+                  }
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="jenisKerusakan">Diagnosis (Jenis Kerusakan)</Label>
+                <Textarea
                   id="jenisKerusakan"
-                  placeholder="Contoh: Seal Bocor, PCB Error..."
+                  placeholder="Contoh: Seal Bocor, Evaporator Kotor..."
                   value={form.jenisKerusakan}
                   onChange={(e) =>
                     handleChange("jenisKerusakan", e.target.value)
@@ -226,6 +237,10 @@ export default function InputServisPage() {
                   required
                 />
               </div>
+            </div>
+
+            {/* Row 4.5: Severity */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="severity">Severity</Label>
                 <Select

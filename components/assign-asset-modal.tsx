@@ -1,57 +1,43 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { assignStagingKeAset } from "@/app/actions/ticket";
 import { CheckCircle, AlertTriangle, Building2, MapPin, Wrench } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { searchAssetsForStaging } from "@/app/actions/asset";
 import Swal from "sweetalert2";
 
-export function AssignAssetModal({ staging, assets, teknisiList }: { staging: any; assets: any[]; teknisiList: any[] }) {
+export function AssignAssetModal({ staging, teknisiList }: { staging: any; teknisiList: any[] }) {
   const [open, setOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState("");
   const [selectedTeknisi, setSelectedTeknisi] = useState("");
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
 
-  // Algoritma Scoring Aset
-  const scoredAssets = useMemo(() => {
-    return assets.map(a => {
-      let score = 0;
-      const tAset = staging.predTipeAset.toLowerCase();
-      const aTipe = a.tipe.toLowerCase();
-      const aKat = a.kategori.toLowerCase();
-      
-      // Match Tipe / Kategori
-      if (aTipe.includes(tAset) || tAset.includes(aTipe)) score += 50;
-      else if (aKat.includes(tAset) || tAset.includes(aKat)) score += 20;
+  const [filteredAssets, setFilteredAssets] = useState<any[]>([]);
+  const [loadingAssets, setLoadingAssets] = useState(false);
 
-      // Match Gedung
-      if (a.lokasiGedung.toLowerCase() === staging.predLokasiGedung.toLowerCase()) score += 30;
-      
-      // Match Lantai
-      const tLantai = staging.predLokasiLantai.toLowerCase();
-      const aLantai = a.lokasiLantai.toLowerCase();
-      if (tLantai === aLantai || tLantai.includes(aLantai) || aLantai.includes(tLantai)) score += 15;
+  useEffect(() => {
+    if (!open) return;
+    
+    const loadAssets = async () => {
+      setLoadingAssets(true);
+      try {
+        const result = await searchAssetsForStaging(staging, search);
+        setFilteredAssets(result);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoadingAssets(false);
+      }
+    };
 
-      // Match Zona
-      const tZona = staging.predLokasiZona.toLowerCase();
-      const aZona = a.lokasiZona.toLowerCase();
-      if (tZona === aZona || tZona.includes(aZona) || aZona.includes(tZona)) score += 10;
-
-      return { ...a, score };
-    }).sort((a, b) => b.score - a.score);
-  }, [assets, staging]);
-
-  const filteredAssets = scoredAssets.filter((a) => {
-    const q = search.toLowerCase();
-    return (
-      a.nama.toLowerCase().includes(q) ||
-      a.id.toLowerCase().includes(q) ||
-      a.lokasiGedung.toLowerCase().includes(q)
-    );
-  }).slice(0, 15); // Batasi 15 hasil agar tidak berat
+    // Debounce search
+    const timer = setTimeout(loadAssets, 300);
+    return () => clearTimeout(timer);
+  }, [search, staging, open]);
 
   const handleAssign = async () => {
     if (!selectedAsset) {
@@ -154,7 +140,12 @@ export function AssignAssetModal({ staging, assets, teknisiList }: { staging: an
               />
               
               <div className="max-h-[250px] overflow-y-auto border rounded-md divide-y">
-                {filteredAssets.length > 0 ? (
+                {loadingAssets ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> 
+                    Mencari aset...
+                  </div>
+                ) : filteredAssets.length > 0 ? (
                   filteredAssets.map((a, index) => (
                     <div 
                       key={a.id} 
@@ -163,7 +154,7 @@ export function AssignAssetModal({ staging, assets, teknisiList }: { staging: an
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <span className="font-bold block flex items-center gap-2">
+                          <span className="font-bold flex items-center gap-2">
                             {a.nama} 
                             {index === 0 && search === "" && a.score > 30 && (
                               <span className="text-[9px] bg-success/20 text-success px-1.5 py-0.5 rounded-full border border-success/30">Top Match</span>

@@ -31,6 +31,17 @@ export default async function FormServisPage({
     return <div>Tiket tidak ditemukan.</div>;
   }
 
+  const staging = await prisma.komplainPerbaikan.findUnique({
+    where: { id },
+    select: { teksKeluhan: true },
+  });
+  
+  // Extend tiket with keluhan
+  const tiketWithKeluhan = {
+    ...tiket,
+    keluhan: staging?.teksKeluhan || "-",
+  };
+
   // Fetch unique data untuk rekomendasi (combobox)
   const uniqueKerusakan = await prisma.assetComplaint.findMany({
     where: { jenisKerusakan: { not: "-" } },
@@ -73,7 +84,7 @@ export default async function FormServisPage({
         </CardHeader>
         <CardContent>
           <FormServisClient 
-            tiket={tiket} 
+            tiket={tiketWithKeluhan as any} 
             uniqueKerusakan={uniqueKerusakan.map(k => k.jenisKerusakan)} 
             uniquePenyebab={uniquePenyebab.map(p => p.penyebab)} 
             uniqueSparepart={uniqueSparepart.map(s => s.sparePartDigunakan)} 

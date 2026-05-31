@@ -45,8 +45,8 @@ export default async function ManajemenDashboard() {
                     {tiket.tanggalPerencanaan.toLocaleDateString("id-ID")}
                   </span>
                 </div>
-                <CardTitle className="text-base mt-2">{tiket.namaAset}</CardTitle>
-                <p className="text-xs text-muted-foreground">ID Aset: {tiket.idAset}</p>
+                <CardTitle className="text-base mt-2">{tiket.tipe || "Aset"}</CardTitle>
+                <p className="text-xs text-muted-foreground">{tiket.namaAset} (ID: {tiket.idAset})</p>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col space-y-4">
                 <div className="bg-muted/50 p-3 rounded-md text-sm flex-1">

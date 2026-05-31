@@ -57,7 +57,7 @@ export default async function ReviewPenggantianPage({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>ID Aset Lama</Label>
-                <Input value={tiket.idAset} readOnly className="bg-muted/40" />
+                <Input value={tiket.idAset ?? ""} readOnly className="bg-muted/40" />
               </div>
               <div className="grid gap-2">
                 <Label>Nama Aset Lama</Label>

@@ -6,13 +6,16 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
 
-// 1. Integrasi NLP: Membuat tiket baru dengan status MENUNGGU_TEKNISI
-export async function buatTiketOtomatis(formData: FormData) {
+// 1. Integrasi NLP: Membuat tiket baru dengan status MENUNGGU_TEKNISI (Diakses dari Client Component)
+export async function buatTiketOtomatisClient(
+  prevState: { success: boolean; error?: string },
+  formData: FormData
+) {
   const keluhan = formData.get("keluhan") as string;
   const idAset = formData.get("idAset") as string;
   
   const aset = await prisma.masterAsset.findUnique({ where: { id: idAset } });
-  if (!aset) throw new Error("Aset tidak ditemukan");
+  if (!aset) return { success: false, error: "Aset tidak ditemukan di database" };
 
   // Panggil FastAPI Microservice
   let kategori = aset.kategori;
@@ -21,22 +24,20 @@ export async function buatTiketOtomatis(formData: FormData) {
   const rawId = `CMP-NLP-${Math.random().toString(36).substring(7)}`;
 
   try {
-    const aiResponse = await fetch("http://127.0.0.1:8000/predict/ticket", {
+    const aiResponse = await fetch("http://127.0.0.1:8000/api/predict/text", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        id_laporan: rawId,
-        teks_keluhan: keluhan,
+        text_complaint: keluhan,
       }),
     });
 
     if (aiResponse.ok) {
       const aiData = await aiResponse.json();
-      const prediksi = aiData.hasil_prediksi_ai;
+      const prediksi = aiData.predictions;
       
-      kategori = prediksi.kategori_departemen || kategori;
-      severity = prediksi.tingkat_severity || severity;
-      saranSistem = aiData.saran_tindakan_sistem || saranSistem;
+      kategori = prediksi.kategori_dept || kategori;
+      severity = prediksi.severity_awal || severity;
     } else {
       console.error("FastAPI error:", await aiResponse.text());
     }
@@ -44,7 +45,8 @@ export async function buatTiketOtomatis(formData: FormData) {
     console.error("FastAPI tidak dapat dihubungi. Pastikan server python berjalan.", e);
   }
 
-  await prisma.assetComplaint.create({
+  try {
+    await prisma.assetComplaint.create({
     data: {
       id: rawId,
       idAset,
@@ -54,7 +56,7 @@ export async function buatTiketOtomatis(formData: FormData) {
       tipe: aset.tipe,
       tanggalPerencanaan: new Date(),
       tanggalPengerjaan: new Date(),
-      jenisKerusakan: keluhan.substring(0, 50),
+      jenisKerusakan: "-",
       severity: severity,
       penyebab: `AI: ${saranSistem}`,
       biayaPerbaikan: 0,
@@ -63,7 +65,28 @@ export async function buatTiketOtomatis(formData: FormData) {
     },
   });
 
-  revalidatePath("/teknisi");
+  await prisma.komplainPerbaikan.create({
+    data: {
+      id: rawId,
+      teksKeluhan: keluhan,
+      predTipeAset: aset.tipe,
+      predLokasiGedung: aset.lokasiGedung,
+      predLokasiLantai: aset.lokasiLantai,
+      predLokasiZona: aset.lokasiZona,
+      predKategoriDept: kategori,
+      predSeverityAwal: severity,
+      isComplete: true,
+      requiresFollowUp: false,
+      statusStaging: "ASSIGNED",
+    },
+  });
+
+    revalidatePath("/tiket");
+    return { success: true };
+  } catch (err: any) {
+    console.error(err);
+    return { success: false, error: err.message || "Terjadi kesalahan internal" };
+  }
 }
 
 // 1b. Guest: Membuat komplain tanpa login & tanpa ID Aset
@@ -77,53 +100,60 @@ export async function buatKomplainGuest(
     return { success: false, error: "Deskripsi terlalu singkat. Jelaskan nama barang, gedung, dan lantai." };
   }
 
-  let kategori = "Umum";
-  let severity = "Sedang";
-  let saranSistem = "Ditangani teknisi";
-  const rawId = `CMP-GUEST-${Math.random().toString(36).substring(7)}`;
+  const rawId = `STG-GUEST-${Math.random().toString(36).substring(7)}`;
+  let aiData: any = null;
 
   try {
-    const aiResponse = await fetch("http://127.0.0.1:8000/predict/ticket", {
+    const aiResponse = await fetch("http://127.0.0.1:8000/api/predict/text", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id_laporan: rawId, teks_keluhan: keluhan }),
+      body: JSON.stringify({ text_complaint: keluhan }),
     });
 
     if (aiResponse.ok) {
-      const aiData = await aiResponse.json();
-      const prediksi = aiData.hasil_prediksi_ai;
-      kategori = prediksi.kategori_departemen || kategori;
-      severity = prediksi.tingkat_severity || severity;
-      saranSistem = aiData.saran_tindakan_sistem || saranSistem;
+      aiData = await aiResponse.json();
     }
   } catch {
     // FastAPI opsional — lanjut tanpa prediksi AI
   }
 
+  // VALIDASI KELENGKAPAN (Menyamakan logika dengan NLP Bot)
+  if (aiData && !(aiData.status_tiket === 'Open' || aiData.is_complete === true)) {
+    const missing = aiData.missing_fields || [];
+    let botMessage = 'Informasi belum lengkap, mohon sebutkan lokasi atau detail lainnya.';
+
+    if (missing.length > 0) {
+        const missingText = missing.map((m: string) => m.charAt(0).toUpperCase() + m.slice(1)).join(', ');
+        botMessage = `Terdapat informasi yang belum lengkap. Mohon lengkapi bagian berikut: ${missingText}.`;
+    }
+    return { success: false, error: botMessage };
+  }
+
   try {
-    await prisma.assetComplaint.create({
+    const prediksi = aiData?.predictions || {};
+    
+    // Hanya simpan di KomplainPerbaikan sebagai staging (OPEN), tidak di AssetComplaint
+    await prisma.komplainPerbaikan.create({
       data: {
         id: rawId,
-        idAset: null,
-        namaAset: keluhan.substring(0, 50).trimEnd(),
-        kategori,
-        subKategori: "-",
-        tipe: "-",
-        tanggalPerencanaan: new Date(),
-        tanggalPengerjaan: new Date(),
-        jenisKerusakan: keluhan.substring(0, 50),
-        severity,
-        penyebab: `AI: ${saranSistem}`,
-        biayaPerbaikan: 0,
-        sparePartDigunakan: "-",
-        statusTiket: StatusTiket.MENUNGGU_TEKNISI,
+        teksKeluhan: aiData?.teks_asli || keluhan,
+        predTipeAset: prediksi.tipe_aset || "Unknown",
+        predLokasiGedung: prediksi.lokasi_gedung || "-",
+        predLokasiLantai: prediksi.lokasi_lantai || "-",
+        predLokasiZona: prediksi.lokasi_zona || "-",
+        predKategoriDept: prediksi.kategori_dept || "Umum",
+        predSeverityAwal: prediksi.severity_awal || "Rendah",
+        isComplete: aiData?.is_complete ?? true,
+        requiresFollowUp: aiData?.requires_follow_up ?? false,
+        statusStaging: "OPEN",
       },
     });
-  } catch {
+  } catch (e) {
+    console.error(e);
     return { success: false, error: "Gagal menyimpan laporan. Silakan coba lagi." };
   }
 
-  revalidatePath("/teknisi");
+  revalidatePath("/tiket");
   return { success: true };
 }
 
@@ -147,7 +177,7 @@ export async function assignStagingKeAset(formData: FormData) {
   // Pindahkan data ke AssetComplaint
   await prisma.assetComplaint.create({
     data: {
-      id: `TKT-${Date.now()}`,
+      id: staging.id,
       idAset: aset.id,
       namaAset: aset.nama,
       kategori: aset.kategori,
@@ -155,7 +185,7 @@ export async function assignStagingKeAset(formData: FormData) {
       tipe: aset.tipe,
       tanggalPerencanaan: new Date(),
       // tanggalPengerjaan akan diisi teknisi nanti
-      jenisKerusakan: staging.teksKeluhan || staging.predTipeAset,
+      jenisKerusakan: "-",
       severity: staging.predSeverityAwal || "Sedang",
       penyebab: "-",
       biayaPerbaikan: 0,

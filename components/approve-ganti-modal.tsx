@@ -13,33 +13,21 @@ export function ApproveGantiModal({
   tiketId, 
   namaAsetLama, 
   merekLama, 
-  modelLama,
-  assets 
+  modelLama
 }: { 
   tiketId: string; 
   namaAsetLama: string;
   merekLama: string;
   modelLama: string;
-  assets: any[];
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [displayBiaya, setDisplayBiaya] = useState("");
   const [rawBiaya, setRawBiaya] = useState("");
 
-  // Helper untuk ID Aset Suggestion (Asumsi ID hanya angka)
+  // Helper untuk ID Aset Suggestion
   const getSuggestedId = () => {
-    if (!assets || assets.length === 0) return "1";
-
-    let maxNum = 0;
-    assets.forEach(a => {
-      const num = parseInt(a.id, 10);
-      if (!isNaN(num) && num > maxNum) {
-        maxNum = num;
-      }
-    });
-    
-    return String(maxNum + 1);
+    return `AST-${Math.floor(Math.random() * 10000)}`;
   };
 
   const handleBiayaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
