@@ -24,8 +24,8 @@ import { StatusBadge } from "@/components/status-badge";
 import { Search, ChevronLeft, ChevronRight, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Aset dengan sisa umur di bawah threshold ini mendapat tombol Edit (Perbaiki)
-const EDIT_THRESHOLD = 90;
+// Aset dengan status Warning atau Critical dapat diperbaiki oleh teknisi
+const EDITABLE_STATUSES = ["Warning", "Critical"];
 
 interface AssetTableProps {
   initialAssets: any[];
@@ -127,7 +127,7 @@ export function AssetTable({
         {isTeknisi && (
           <p className="mb-3 text-xs text-muted-foreground flex items-center gap-1.5">
             <Wrench className="h-3 w-3 shrink-0" />
-            Tombol <strong>Perbaiki</strong> muncul pada aset dengan sisa umur ≤ {EDIT_THRESHOLD} hari.
+            Tombol <strong>Perbaiki</strong> muncul pada aset berstatus <strong>Warning</strong> atau <strong>Critical</strong>.
           </p>
         )}
 
@@ -148,14 +148,19 @@ export function AssetTable({
             </TableHeader>
             <TableBody>
               {initialAssets.map((a) => {
-                const canEdit = isTeknisi && a.sisaUmurHari <= EDIT_THRESHOLD;
-                const isCritical = a.sisaUmurHari <= 30;
+                const canEdit = isTeknisi && EDITABLE_STATUSES.includes(a.healthStatus);
+                const isCritical = a.healthStatus === "Critical";
+                const isWarning  = a.healthStatus === "Warning";
 
                 return (
                   <TableRow
                     key={a.id}
                     className={`transition-colors hover:bg-muted/50 ${
-                      isCritical ? "bg-destructive/5 hover:bg-destructive/10" : ""
+                      isCritical
+                        ? "bg-destructive/5 hover:bg-destructive/10"
+                        : isWarning
+                        ? "bg-warning/5 hover:bg-warning/10"
+                        : ""
                     }`}
                   >
                     <TableCell className="font-heading text-xs">
@@ -180,7 +185,7 @@ export function AssetTable({
                       className={`text-right font-heading text-xs font-semibold ${
                         isCritical
                           ? "text-destructive"
-                          : a.sisaUmurHari <= EDIT_THRESHOLD
+                          : isWarning
                           ? "text-warning"
                           : ""
                       }`}

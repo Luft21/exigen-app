@@ -9,7 +9,7 @@ import Link from "next/link";
 import { ArrowLeft, Wrench, AlertTriangle } from "lucide-react";
 import { FormPerbaikanAset } from "@/components/form-perbaikan-aset";
 
-export const EDIT_THRESHOLD_DAYS = 90;
+const EDITABLE_STATUSES = ["Warning", "Critical"];
 
 export const metadata = { title: "Perbaikan Aset" };
 
@@ -26,8 +26,8 @@ export default async function EditAsetPage({
   const aset = await prisma.masterAsset.findUnique({ where: { id } });
   if (!aset) redirect("/aset");
 
-  // Guard: hanya aset dengan sisa umur rendah yang bisa diedit
-  if (aset.sisaUmurHari > EDIT_THRESHOLD_DAYS) redirect("/aset");
+  // Guard: hanya aset berstatus Warning atau Critical yang bisa diedit
+  if (!EDITABLE_STATUSES.includes(aset.healthStatus)) redirect("/aset");
 
   const [uniqueKerusakan, uniquePenyebab, uniqueSparepart] = await Promise.all([
     prisma.assetComplaint.findMany({

@@ -69,6 +69,7 @@ export default function LoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter username"
                 required
+                suppressHydrationWarning
                 className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-white/20 transition-colors focus:border-[hsl(210,45%,43%)] focus:outline-none focus:ring-1 focus:ring-[hsl(210,45%,43%)]/40"
               />
             </div>
@@ -81,6 +82,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
+                suppressHydrationWarning
                 className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-white/20 transition-colors focus:border-[hsl(210,45%,43%)] focus:outline-none focus:ring-1 focus:ring-[hsl(210,45%,43%)]/40"
               />
             </div>

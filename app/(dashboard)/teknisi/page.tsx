@@ -1,4 +1,3 @@
-import { PrismaClient, StatusTiket } from "@prisma/client";
 import { StatusTiket } from "@prisma/client";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
