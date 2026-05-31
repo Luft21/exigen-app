@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Work_Sans } from "next/font/google";
 import "./globals.css";
+import { NextAuthProvider } from "@/components/session-provider";
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-heading",
@@ -24,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="id" className={`${jetbrainsMono.variable} ${workSans.variable} h-full`} suppressHydrationWarning>
       <body className="min-h-full bg-background font-sans antialiased">
-        {children}
+        <NextAuthProvider>{children}</NextAuthProvider>
       </body>
     </html>
   );
