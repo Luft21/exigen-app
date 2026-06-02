@@ -16,18 +16,18 @@ interface KPICardProps {
 function KPICard({ title, value, subtitle, icon, accent, delay = 0 }: KPICardProps) {
   return (
     <Card className="animate-fade-in-up overflow-hidden" style={{ animationDelay: `${delay}ms` }}>
-      <CardContent className="p-5">
+      <CardContent className="py-6 px-5">
         <div className="flex items-start justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
               {title}
             </span>
-            <span className={`font-heading text-2xl font-bold tracking-tight ${accent || "text-foreground"}`}>
+            <span className={`font-heading text-4xl font-extrabold tracking-tight ${accent || "text-foreground"}`}>
               {value}
             </span>
-            <span className="text-xs text-muted-foreground">{subtitle}</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{subtitle}</span>
           </div>
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
             {icon}
           </div>
         </div>
@@ -44,6 +44,7 @@ export function KPICards({ data }: { data: { totalAset: number, asetKritis: numb
         value={data.totalAset}
         subtitle="Aset terdaftar"
         icon={<Box className="h-5 w-5" />}
+        accent="text-blue-600 dark:text-blue-400"
         delay={0}
       />
       <KPICard

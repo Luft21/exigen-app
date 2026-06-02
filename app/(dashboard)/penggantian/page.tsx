@@ -69,35 +69,34 @@ export default async function PenggantianPage({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-lg border overflow-x-auto">
+          <div className="rounded-xl border-0 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-2px_rgba(0,0,0,0.05)] overflow-x-auto bg-card">
             <Table>
               <TableHeader>
-                <TableRow className="hover:bg-transparent bg-muted/60">
-                  <TableHead className="text-xs">ID Lama</TableHead>
-                  <TableHead className="text-xs">Tipe Aset</TableHead>
-                  <TableHead className="text-xs">Kategori</TableHead>
-                  <TableHead className="text-xs">Nama Aset Lama</TableHead>
-                  <TableHead className="text-xs text-center">→</TableHead>
-                  <TableHead className="text-xs">ID Baru</TableHead>
-                  <TableHead className="text-xs">Tanggal</TableHead>
-                  <TableHead className="text-xs">Alasan</TableHead>
-                  <TableHead className="text-xs text-right">Biaya</TableHead>
+                <TableRow className="hover:bg-transparent bg-muted/60 border-b">
+                  <TableHead>ID Lama</TableHead>
+                  <TableHead>Tipe Aset</TableHead>
+                  <TableHead>Kategori</TableHead>
+                  <TableHead>Nama Aset Lama</TableHead>
+                  <TableHead className="text-center">→</TableHead>
+                  <TableHead>ID Baru</TableHead>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead className="text-right">Biaya</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {replacementHistoryDb.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="font-heading text-xs">{r.idAsetLama}</TableCell>
-                    <TableCell className="text-xs font-medium">{r.tipe}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{r.kategori}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{r.namaAsetLama}</TableCell>
+                    <TableCell className="font-heading font-bold text-primary hover:underline cursor-pointer">{r.idAsetLama}</TableCell>
+                    <TableCell className="font-medium">{r.tipe}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.kategori}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.namaAsetLama}</TableCell>
                     <TableCell className="text-center">
-                      <ArrowRight className="h-3.5 w-3.5 text-accent-custom mx-auto" />
+                      <ArrowRight className="h-4 w-4 text-sky-500 font-bold mx-auto" />
                     </TableCell>
-                    <TableCell className="font-heading text-xs text-primary font-semibold">{r.idAsetBaru}</TableCell>
-                    <TableCell className="text-xs">{formatDate(r.tanggalPenggantian)}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground max-w-[200px]">{r.alasanPenggantian}</TableCell>
-                    <TableCell className="text-xs font-heading text-right font-semibold">{formatRupiah(r.biayaPenggantian)}</TableCell>
+                    <TableCell className="font-heading text-primary font-bold hover:underline cursor-pointer">{r.idAsetBaru}</TableCell>
+                    <TableCell>{formatDate(r.tanggalPenggantian)}</TableCell>
+                    <TableCell className="text-muted-foreground max-w-[200px] truncate">{r.alasanPenggantian}</TableCell>
+                    <TableCell className="font-heading text-right font-semibold">{formatRupiah(r.biayaPenggantian)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

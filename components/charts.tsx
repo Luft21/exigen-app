@@ -10,13 +10,34 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   CartesianGrid,
   Legend,
+  Label,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-card shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-2px_rgba(0,0,0,0.05)] border-0 rounded-lg p-3 text-xs">
+        <p className="font-semibold text-foreground mb-1">{label}</p>
+        {payload.map((p: any, i: number) => (
+          <div key={i} className="flex items-center gap-2">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: p.color || p.fill }}
+            />
+            <span className="text-muted-foreground">{p.name || p.dataKey}:</span>
+            <span className="font-heading font-medium text-foreground">{p.value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 export function HealthDonutChart({ data }: { data: { name: string, value: number, fill: string }[] }) {
   const total = data.reduce((s, d) => s + d.value, 0);
@@ -24,38 +45,56 @@ export function HealthDonutChart({ data }: { data: { name: string, value: number
   return (
     <Card className="animate-fade-in-up" style={{ animationDelay: "400ms" }}>
       <CardHeader>
-        <CardTitle className="font-heading text-sm">Distribusi Status Kesehatan</CardTitle>
+        <CardTitle className="font-heading text-sm text-foreground/80">Distribusi Status Kesehatan</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center gap-6">
-          <ResponsiveContainer width={160} height={160}>
+        <div className="flex flex-col sm:flex-row items-center gap-6">
+          <ResponsiveContainer width={180} height={180}>
             <PieChart>
+              <defs>
+                <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="4" stdDeviation="4" floodOpacity="0.05" />
+                </filter>
+              </defs>
               <Pie
                 data={data}
                 cx="50%"
                 cy="50%"
-                innerRadius={48}
-                outerRadius={72}
-                paddingAngle={3}
+                innerRadius={65}
+                outerRadius={85}
+                paddingAngle={4}
                 dataKey="value"
                 strokeWidth={0}
+                style={{ filter: 'url(#shadow)' }}
               >
                 {data.map((entry, i) => (
-                  <Cell key={i} fill={entry.fill} />
+                  <Cell key={i} fill={entry.fill} className="hover:opacity-80 transition-opacity duration-300 outline-none" />
                 ))}
+                <Label
+                  content={({ viewBox }) => {
+                    const { cx, cy } = viewBox as any;
+                    return (
+                      <text x={cx} y={cy} fill="hsl(var(--foreground))" className="font-heading font-bold" textAnchor="middle" dominantBaseline="central">
+                        <tspan x={cx} y={cy} dy="-2" fontSize="24">{total}</tspan>
+                        <tspan x={cx} y={cy} dy="20" fontSize="10" fill="hsl(var(--muted-foreground))">Total Aset</tspan>
+                      </text>
+                    );
+                  }}
+                />
               </Pie>
+              <Tooltip content={<CustomTooltip />} />
             </PieChart>
           </ResponsiveContainer>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {data.map((d) => (
-              <div key={d.name} className="flex items-center gap-2 text-sm">
+              <div key={d.name} className="flex items-center gap-2 text-sm group">
                 <span
-                  className="h-2.5 w-2.5 rounded-full"
+                  className="h-3 w-3 rounded-full shadow-sm transition-transform group-hover:scale-125"
                   style={{ backgroundColor: d.fill }}
                 />
-                <span className="text-muted-foreground">{d.name}</span>
-                <span className="font-heading font-semibold ml-auto">
-                  {d.value}/{total}
+                <span className="text-muted-foreground group-hover:text-foreground transition-colors">{d.name}</span>
+                <span className="font-heading font-semibold ml-auto text-foreground/90">
+                  {d.value} <span className="text-[10px] text-muted-foreground">/ {total}</span>
                 </span>
               </div>
             ))}
@@ -67,35 +106,38 @@ export function HealthDonutChart({ data }: { data: { name: string, value: number
 }
 
 export function SisaUmurBarChart({ data }: { data: any[] }) {
-
   return (
     <Card className="animate-fade-in-up" style={{ animationDelay: "500ms" }}>
       <CardHeader>
-        <CardTitle className="font-heading text-sm">Rata-rata Sisa Umur per Kategori</CardTitle>
+        <CardTitle className="font-heading text-sm text-foreground/80">Rata-rata Sisa Umur per Kategori</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={data} barSize={28}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+        <ResponsiveContainer width="100%" height={250}>
+          <BarChart data={data} layout="vertical" barSize={24} margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="barGradient" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.8}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/50" />
             <XAxis
-              dataKey="kategori"
-              tick={{ fontSize: 11 }}
-              className="fill-muted-foreground"
+              type="number"
+              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+              axisLine={false}
+              tickLine={false}
+              dx={0}
             />
             <YAxis
-              tick={{ fontSize: 11 }}
-              className="fill-muted-foreground"
-              label={{ value: "Hari", angle: -90, position: "insideLeft", fontSize: 11 }}
+              dataKey="kategori"
+              type="category"
+              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+              axisLine={false}
+              tickLine={false}
+              width={100}
             />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "8px",
-                fontSize: "12px",
-              }}
-            />
-            <Bar dataKey="rataRata" fill="hsl(210 45% 43%)" radius={[4, 4, 0, 0]} />
+            <Tooltip cursor={{ fill: 'hsl(var(--muted)/0.3)' }} content={<CustomTooltip />} />
+            <Bar dataKey="rataRata" fill="url(#barGradient)" radius={[0, 4, 4, 0]} className="hover:opacity-80 transition-opacity" />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
@@ -104,47 +146,49 @@ export function SisaUmurBarChart({ data }: { data: any[] }) {
 }
 
 export function DamageFrequencyChart({ data }: { data: any[] }) {
-
   return (
     <Card className="animate-fade-in-up col-span-full" style={{ animationDelay: "600ms" }}>
       <CardHeader>
-        <CardTitle className="font-heading text-sm">Frekuensi Kerusakan per Bulan</CardTitle>
+        <CardTitle className="font-heading text-sm text-foreground/80">Tren Frekuensi Kerusakan</CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={220}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+          <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
             <XAxis
               dataKey="bulan"
-              tick={{ fontSize: 11 }}
-              className="fill-muted-foreground"
+              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+              axisLine={false}
+              tickLine={false}
+              dy={10}
             />
             <YAxis
-              tick={{ fontSize: 11 }}
-              className="fill-muted-foreground"
+              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+              axisLine={false}
+              tickLine={false}
+              dx={-10}
               allowDecimals={false}
             />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "8px",
-                fontSize: "12px",
-              }}
-            />
-            <Legend />
-            <Line
+            <Tooltip content={<CustomTooltip />} />
+            <Area
               type="monotone"
               dataKey="jumlah"
-              name="Jumlah Kerusakan"
-              stroke="hsl(210 53% 24%)"
-              strokeWidth={2}
-              dot={{ r: 4, fill: "hsl(210 53% 24%)" }}
-              activeDot={{ r: 6 }}
+              name="Kerusakan"
+              stroke="#3b82f6"
+              strokeWidth={3}
+              fill="url(#areaGradient)"
+              activeDot={{ r: 6, strokeWidth: 0, fill: "#3b82f6" }}
             />
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
   );
 }
+

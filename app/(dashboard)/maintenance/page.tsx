@@ -1,17 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SeverityBadge } from "@/components/severity-badge";
 import prisma from "@/lib/prisma";
 
 export const metadata = {
   title: "Maintenance",
   description: "Riwayat maintenance dan perbaikan seluruh aset.",
-};
-
-const severityColor: Record<string, string> = {
-  Ringan: "bg-success/15 text-success border-success/30",
-  Sedang: "bg-watch/15 text-watch border-watch/30",
-  Berat: "bg-warning/15 text-warning border-warning/30",
-  Kritis: "bg-destructive/15 text-destructive border-destructive/30",
 };
 
 // Helpers untuk format data langsung di file agar tidak tergantung lib/data.ts
@@ -76,48 +70,46 @@ export default async function MaintenancePage({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-lg border overflow-x-auto">
+          <div className="rounded-xl border-0 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-2px_rgba(0,0,0,0.05)] overflow-x-auto bg-card">
             <table className="w-full caption-bottom text-sm" style={{ minWidth: "1100px" }}>
               <thead className="[&_tr]:border-b bg-muted/60">
                 <tr className="border-b">
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">ID</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Aset</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Tgl Perencanaan</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Tgl Pengerjaan</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Tgl Selesai</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Keluhan Awal</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Jenis Kerusakan</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Severity</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Penyebab</th>
-                  <th className="h-10 px-4 text-right align-middle font-medium whitespace-nowrap text-foreground text-xs">Biaya</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Spare Part</th>
-                  <th className="h-10 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground text-xs">Teknisi</th>
+                  <th className="h-12 px-4 text-left align-middle font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">ID</th>
+                  <th className="h-12 px-4 text-left align-middle font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Aset</th>
+                  <th className="h-12 px-4 text-left align-middle font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Tgl Perencanaan</th>
+                  <th className="h-12 px-4 text-left align-middle font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Tgl Pengerjaan</th>
+                  <th className="h-12 px-4 text-left align-middle font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Tgl Selesai</th>
+                  <th className="h-12 px-4 text-left align-middle font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Keluhan Awal</th>
+                  <th className="h-12 px-4 text-left align-middle font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Jenis Kerusakan</th>
+                  <th className="h-12 px-4 text-left align-middle font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Severity</th>
+                  <th className="h-12 px-4 text-left align-middle font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Penyebab</th>
+                  <th className="h-12 px-4 text-right align-middle font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Biaya</th>
+                  <th className="h-12 px-4 text-left align-middle font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Spare Part</th>
+                  <th className="h-12 px-4 text-left align-middle font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Teknisi</th>
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
                 {assetComplaintsDb.map((c) => (
-                  <tr key={c.id} className="border-b transition-colors hover:bg-muted/50">
-                    <td className="p-4 align-middle whitespace-nowrap font-heading text-xs">{c.id}</td>
-                    <td className="p-4 align-middle whitespace-nowrap text-xs">
+                  <tr key={c.id} className="border-b transition-colors hover:bg-blue-50/50 dark:hover:bg-blue-900/20 even:bg-slate-50/50 dark:even:bg-slate-800/30">
+                    <td className="py-4 px-4 align-middle whitespace-nowrap font-heading text-xs text-primary font-bold hover:underline cursor-pointer">{c.id}</td>
+                    <td className="py-4 px-4 align-middle whitespace-nowrap text-xs">
                       <div>
                         <span className="font-heading text-[10px] text-muted-foreground block">{c.idAset}</span>
-                        <span className="font-medium">{c.namaAset}</span>
+                        <span className="font-medium text-primary hover:underline cursor-pointer">{c.namaAset}</span>
                       </div>
                     </td>
-                    <td className="p-4 align-middle whitespace-nowrap text-xs">{formatDate(c.tanggalPerencanaan)}</td>
-                    <td className="p-4 align-middle whitespace-nowrap text-xs">{formatDate(c.tanggalPengerjaan)}</td>
-                    <td className="p-4 align-middle whitespace-nowrap text-xs">{formatDate(c.tanggalSelesai)}</td>
-                    <td className="p-4 align-middle whitespace-nowrap text-xs max-w-[150px] truncate" title={stagingMap.get(c.id) || "-"}>{stagingMap.get(c.id) || "-"}</td>
-                    <td className="p-4 align-middle whitespace-nowrap text-xs font-medium max-w-[150px] truncate" title={c.jenisKerusakan}>{c.jenisKerusakan}</td>
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      <Badge variant="outline" className={`text-[9px] ${severityColor[c.severity]}`}>
-                        {c.severity}
-                      </Badge>
+                    <td className="py-4 px-4 align-middle whitespace-nowrap text-xs">{formatDate(c.tanggalPerencanaan)}</td>
+                    <td className="py-4 px-4 align-middle whitespace-nowrap text-xs">{formatDate(c.tanggalPengerjaan)}</td>
+                    <td className="py-4 px-4 align-middle whitespace-nowrap text-xs">{formatDate(c.tanggalSelesai)}</td>
+                    <td className="py-4 px-4 align-middle whitespace-nowrap text-xs max-w-[150px] truncate" title={stagingMap.get(c.id) || "-"}>{stagingMap.get(c.id) || "-"}</td>
+                    <td className="py-4 px-4 align-middle whitespace-nowrap text-xs font-medium max-w-[150px] truncate" title={c.jenisKerusakan}>{c.jenisKerusakan}</td>
+                    <td className="py-4 px-4 align-middle whitespace-nowrap">
+                      <SeverityBadge severity={c.severity} />
                     </td>
-                    <td className="p-4 align-middle whitespace-nowrap text-xs text-muted-foreground max-w-[180px] truncate">{c.penyebab}</td>
-                    <td className="p-4 align-middle whitespace-nowrap text-xs font-heading text-right">{formatRupiah(c.biayaPerbaikan)}</td>
-                    <td className="p-4 align-middle whitespace-nowrap text-xs text-muted-foreground max-w-[180px] truncate">{c.sparePartDigunakan}</td>
-                    <td className="p-4 align-middle whitespace-nowrap text-xs">{c.teknisiPelaksana?.nama || "-"}</td>
+                    <td className="py-4 px-4 align-middle whitespace-nowrap text-xs text-muted-foreground max-w-[180px] truncate">{c.penyebab}</td>
+                    <td className="py-4 px-4 align-middle whitespace-nowrap text-xs font-heading text-right">{formatRupiah(c.biayaPerbaikan)}</td>
+                    <td className="py-4 px-4 align-middle whitespace-nowrap text-xs text-muted-foreground max-w-[180px] truncate">{c.sparePartDigunakan}</td>
+                    <td className="py-4 px-4 align-middle whitespace-nowrap text-xs">{c.teknisiPelaksana?.nama || "-"}</td>
                   </tr>
                 ))}
               </tbody>

@@ -14,18 +14,48 @@ export async function GET() {
       return NextResponse.json({ message: "Tidak ada aset aktif untuk diprediksi" });
     }
 
+    // 1.5. Ambil summary histori kerusakan untuk menghitung total komplain dan biaya perbaikan
+    const complaintsSummary = await prisma.assetComplaint.groupBy({
+      by: ['idAset'],
+      _count: {
+        id: true,
+      },
+      _sum: {
+        biayaPerbaikan: true,
+      },
+      where: {
+        idAset: { not: null }
+      }
+    });
+
+    const summaryMap = new Map();
+    for (const summary of complaintsSummary) {
+      if (summary.idAset) {
+        summaryMap.set(summary.idAset, {
+          jumlah_kerusakan: summary._count.id,
+          biaya_perbaikan_kumulatif: summary._sum.biayaPerbaikan || 0,
+        });
+      }
+    }
+
     // 2. Siapkan batch data untuk dikirim ke Python ML
     let updatedCount = 0;
     
     // Asumsi kita hit API satu per satu untuk simulasi (Idealnya kirim batch array ke Python API)
     for (const asset of activeAssets) {
-      // Kumpulkan features (dalam skenario nyata, join dengan data historis)
+      const assetSummary = summaryMap.get(asset.id) || { jumlah_kerusakan: 0, biaya_perbaikan_kumulatif: 0 };
+      const umurHariNow = Math.floor((Date.now() - new Date(asset.tanggalInstalasi).getTime()) / 86_400_000);
+      
+      // Kumpulkan features berdasarkan data historis aktual
       const features = {
         kategori: asset.kategori,
+        subKategori: asset.subKategori,
+        tipe: asset.tipe,
+        merek: asset.merek,
         tingkatKekritisan: asset.tingkatKekritisan,
-        // Mocking histori kerusakan untuk prediksi
-        jumlah_kerusakan: Math.floor(Math.random() * 10),
-        biaya_perbaikan_kumulatif: Math.floor(Math.random() * 20000000),
+        jumlah_kerusakan: assetSummary.jumlah_kerusakan,
+        biaya_perbaikan_kumulatif: assetSummary.biaya_perbaikan_kumulatif,
+        umur: umurHariNow,
       };
 
       try {

@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { SeverityBadge } from "@/components/severity-badge";
 import { Wrench, Replace } from "lucide-react";
 import { mulaiServis, ajukanPenggantian } from "@/app/actions/ticket";
 import prisma from "@/lib/prisma";
@@ -47,9 +47,7 @@ export default async function TeknisiDashboard() {
             <Card key={tiket.id} className="flex flex-col">
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
-                  <Badge variant={tiket.severity === "Fatal" || tiket.severity === "Kritis" ? "destructive" : "default"}>
-                    {tiket.severity}
-                  </Badge>
+                  <SeverityBadge severity={tiket.severity} />
                   <span className="text-xs text-muted-foreground">
                     {tiket.tanggalPerencanaan.toLocaleDateString("id-ID")}
                   </span>
