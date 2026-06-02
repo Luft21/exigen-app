@@ -86,8 +86,8 @@ export function AssignAssetModal({ staging, teknisiList }: { staging: any; tekni
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="ghost" className="h-8 gap-1 text-primary hover:bg-primary/10">
-          <CheckCircle className="h-3 w-3" /> Assign Aset
+        <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10" title="Assign Aset">
+          <CheckCircle className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">

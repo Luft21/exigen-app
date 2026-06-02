@@ -160,7 +160,7 @@ export default async function TiketPage({
         <tbody className="[&_tr:last-child]:border-0">
           {data.map((t) => (
             <tr key={t.id} className="border-b transition-colors hover:bg-blue-50/50 dark:hover:bg-blue-900/20 even:bg-slate-50/50 dark:even:bg-slate-800/30">
-              <td className="py-4 px-4 align-middle font-heading text-xs text-primary font-bold hover:underline cursor-pointer">{t.id}</td>
+              <td className="py-4 px-4 align-middle font-mono text-xs text-primary font-semibold hover:underline cursor-pointer">{t.id}</td>
               <td className="py-4 px-4 align-middle text-xs max-w-[200px] truncate" title={t.teksKeluhan}>
                 {t.teksKeluhan || "-"}
               </td>
@@ -171,11 +171,15 @@ export default async function TiketPage({
                 </div>
               </td>
               <td className="py-4 px-4 align-middle text-xs">
-                <div>Gedung: <span className="font-medium">{t.predLokasiGedung}</span></div>
-                <div className="text-muted-foreground">{t.predLokasiLantai.replace("Lantai ", "Lt. ")}, {t.predLokasiZona}</div>
+                {(!t.predLokasiGedung || t.predLokasiGedung === "-") ? (
+                  <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 text-[10px] mb-1">Gedung Tidak Terdeteksi</Badge>
+                ) : (
+                  <div>Gedung: <span className="font-medium">{t.predLokasiGedung}</span></div>
+                )}
+                <div className="text-muted-foreground">{t.predLokasiLantai?.replace("Lantai ", "Lt. ")}, {t.predLokasiZona}</div>
               </td>
               <td className="py-4 px-4 align-middle">
-                <Badge variant="outline" className={`text-[10px] ${t.predSeverityAwal === 'Tinggi' ? 'bg-destructive/15 text-destructive border-destructive/30' : t.predSeverityAwal === 'Sedang' ? 'bg-warning/15 text-warning border-warning/30' : 'bg-primary/15 text-primary border-primary/30'}`}>
+                <Badge variant="outline" className={`text-[10px] ${t.predSeverityAwal === 'Tinggi' ? 'bg-red-100 text-red-800 border-red-300' : t.predSeverityAwal === 'Sedang' ? 'bg-orange-100 text-orange-800 border-orange-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300'}`}>
                   {t.predSeverityAwal}
                 </Badge>
               </td>
@@ -218,7 +222,7 @@ export default async function TiketPage({
         <tbody className="[&_tr:last-child]:border-0">
           {data.map((t) => (
             <tr key={t.id} className="border-b transition-colors hover:bg-blue-50/50 dark:hover:bg-blue-900/20 even:bg-slate-50/50 dark:even:bg-slate-800/30">
-              <td className="py-4 px-4 align-middle font-heading text-xs text-primary font-bold hover:underline cursor-pointer">{t.id}</td>
+              <td className="py-4 px-4 align-middle font-mono text-xs text-primary font-semibold hover:underline cursor-pointer">{t.id}</td>
               <td className="py-4 px-4 align-middle">
                 <div className="text-xs">
                   <span className="font-medium text-sm block text-primary hover:underline cursor-pointer">{t.tipe || "Aset"}</span>
@@ -335,45 +339,73 @@ export default async function TiketPage({
           <CardTitle className="font-heading text-sm">Kelola Tiket</CardTitle>
         </CardHeader>
         <CardContent>
-          <TiketFilter 
-            gedungList={gedungList}
-            lantaiList={lantaiList}
-            zonaList={zonaList}
-            kerusakanList={kerusakanList}
-            teknisiList={teknisiList}
-          />
-
           <Tabs defaultValue={tab || "staging"} className="w-full">
             <TabsList className="mb-6 grid w-full max-w-2xl grid-cols-3 p-1 bg-muted/50 rounded-lg">
               <TabsTrigger 
                 value="staging" 
-                className="font-medium gap-2 text-slate-500 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md transition-all rounded-md py-2"
+                className="group font-medium gap-2 text-slate-500 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md transition-all rounded-md py-2"
               >
                 <MessageSquareWarning className="h-4 w-4" /> Staging NLP
-                <span className="ml-1 inline-flex items-center justify-center bg-cyan-500 text-white text-[10px] font-bold h-5 px-1.5 min-w-[20px] rounded-full">{stagingTickets.length}</span>
+                <span className="ml-1 inline-flex items-center justify-center bg-slate-200 text-slate-600 group-data-[state=active]:bg-white group-data-[state=active]:text-primary text-[10px] font-bold h-5 px-1.5 min-w-[20px] rounded-full">
+                  {stagingTickets.length >= 1000 ? (stagingTickets.length / 1000).toFixed(1) + 'k' : stagingTickets.length}
+                </span>
               </TabsTrigger>
               <TabsTrigger 
                 value="aktif" 
-                className="font-medium text-slate-500 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md transition-all rounded-md py-2"
+                className="group font-medium text-slate-500 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md transition-all rounded-md py-2"
               >
                 Tiket Aktif
-                <span className="ml-1.5 inline-flex items-center justify-center bg-cyan-500 text-white text-[10px] font-bold h-5 px-1.5 min-w-[20px] rounded-full">{activeTickets.length}</span>
+                <span className="ml-1.5 inline-flex items-center justify-center bg-slate-200 text-slate-600 group-data-[state=active]:bg-white group-data-[state=active]:text-primary text-[10px] font-bold h-5 px-1.5 min-w-[20px] rounded-full">
+                  {activeTickets.length >= 1000 ? (activeTickets.length / 1000).toFixed(1) + 'k' : activeTickets.length}
+                </span>
               </TabsTrigger>
               <TabsTrigger 
                 value="riwayat" 
-                className="font-medium text-slate-500 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md transition-all rounded-md py-2"
+                className="group font-medium text-slate-500 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md transition-all rounded-md py-2"
               >
                 Riwayat Selesai
-                <span className="ml-1.5 inline-flex items-center justify-center bg-cyan-500 text-white text-[10px] font-bold h-5 px-1.5 min-w-[20px] rounded-full">{totalHistory}</span>
+                <span className="ml-1.5 inline-flex items-center justify-center bg-slate-200 text-slate-600 group-data-[state=active]:bg-white group-data-[state=active]:text-primary text-[10px] font-bold h-5 px-1.5 min-w-[20px] rounded-full">
+                  {totalHistory >= 1000 ? (totalHistory / 1000).toFixed(1) + 'k' : totalHistory}
+                </span>
               </TabsTrigger>
             </TabsList>
             <TabsContent value="staging" className="m-0 animate-fade-in-up">
+              <div className="mb-4">
+                <TiketFilter 
+                  gedungList={gedungList}
+                  lantaiList={lantaiList}
+                  zonaList={zonaList}
+                  kerusakanList={kerusakanList}
+                  teknisiList={teknisiList}
+                  activeTab="staging"
+                />
+              </div>
               {renderStagingTable(stagingTickets, teknisiList)}
             </TabsContent>
             <TabsContent value="aktif" className="m-0 animate-fade-in-up">
+              <div className="mb-4">
+                <TiketFilter 
+                  gedungList={gedungList}
+                  lantaiList={lantaiList}
+                  zonaList={zonaList}
+                  kerusakanList={kerusakanList}
+                  teknisiList={teknisiList}
+                  activeTab="aktif"
+                />
+              </div>
               {renderTable(activeTickets)}
             </TabsContent>
             <TabsContent value="riwayat" className="m-0 animate-fade-in-up">
+              <div className="mb-4">
+                <TiketFilter 
+                  gedungList={gedungList}
+                  lantaiList={lantaiList}
+                  zonaList={zonaList}
+                  kerusakanList={kerusakanList}
+                  teknisiList={teknisiList}
+                  activeTab="riwayat"
+                />
+              </div>
               {renderTable(historyTickets)}
               
               {/* Pagination untuk Riwayat */}

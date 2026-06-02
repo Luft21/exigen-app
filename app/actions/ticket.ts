@@ -370,7 +370,76 @@ export async function selesaikanServis(formData: FormData) {
     },
   });
 
-  revalidatePath("/teknisi");
+  revalidatePath("/tiket");
+  revalidatePath("/maintenance");
+}
+
+// 7. Teknisi/Admin: Memasukkan Data Servis Historis (Langsung Selesai)
+export async function buatDataServisHistory(formData: FormData) {
+  const session = await getServerSession(authOptions);
+  if (!session) throw new Error("Unauthorized");
+
+  const idAset = formData.get("idAset") as string;
+  const namaAset = formData.get("namaAset") as string;
+  const kategori = formData.get("kategori") as string;
+  const subKategori = formData.get("subKategori") as string;
+  const tipe = formData.get("tipe") as string;
+  
+  const tanggalPerencanaan = new Date(formData.get("tanggalPerencanaan") as string);
+  const tanggalPengerjaan = new Date(formData.get("tanggalPengerjaan") as string);
+  const tanggalSelesai = new Date(formData.get("tanggalSelesai") as string);
+  
+  const keluhan = formData.get("keluhan") as string;
+  const jenisKerusakan = formData.get("jenisKerusakan") as string;
+  const severity = formData.get("severity") as string;
+  const penyebab = formData.get("penyebab") as string;
+  const biayaPerbaikan = Number(formData.get("biayaPerbaikan") || 0);
+  const sparePartDigunakan = formData.get("sparePartDigunakan") as string;
+  const teknisiPelaksana = formData.get("teknisiPelaksana") as string;
+
+  const rawId = `CMP-HIS-${Math.random().toString(36).substring(7).toUpperCase()}`;
+
+  await prisma.assetComplaint.create({
+    data: {
+      id: rawId,
+      idAset,
+      namaAset,
+      kategori,
+      subKategori,
+      tipe,
+      tanggalPerencanaan,
+      tanggalPengerjaan,
+      tanggalSelesai,
+      jenisKerusakan,
+      severity,
+      penyebab,
+      biayaPerbaikan,
+      sparePartDigunakan,
+      statusTiket: StatusTiket.SELESAI,
+      idTeknisi: session.user.id,
+      // Karena historis, kita asumsikan keluhan disimpan di penyebab atau tempat lain
+      // Jika diperlukan, bisa disimpan juga ke KomplainPerbaikan
+    },
+  });
+
+  // Simpan keluhan awal ke KomplainPerbaikan (Staging) sebagai arsip
+  await prisma.komplainPerbaikan.create({
+    data: {
+      id: rawId,
+      teksKeluhan: keluhan,
+      predTipeAset: tipe,
+      predLokasiGedung: "-",
+      predLokasiLantai: "-",
+      predLokasiZona: "-",
+      predKategoriDept: kategori,
+      predSeverityAwal: severity,
+      isComplete: true,
+      requiresFollowUp: false,
+      statusStaging: "ASSIGNED", // Langsung assigned/selesai
+    },
+  });
+
+  revalidatePath("/input-servis");
   revalidatePath("/tiket");
   revalidatePath("/maintenance");
 }
