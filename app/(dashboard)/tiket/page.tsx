@@ -16,10 +16,10 @@ import { TiketFilter } from "@/components/tiket-filter";
 import prisma from "@/lib/prisma";
 
 const statusColor: Record<string, string> = {
-  MENUNGGU_TEKNISI: "bg-warning/15 text-warning border-warning/30",
-  PROSES_SERVIS: "bg-primary/15 text-primary border-primary/30",
-  MENUNGGU_APPROVAL_GANTI: "bg-destructive/15 text-destructive border-destructive/30",
-  SELESAI: "bg-success/15 text-success border-success/30",
+  MENUNGGU_TEKNISI: "bg-amber-50 text-amber-600 border-amber-200/50 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800/50",
+  PROSES_SERVIS: "bg-primary/10 text-primary border-primary/20",
+  MENUNGGU_APPROVAL_GANTI: "bg-rose-50 text-rose-600 border-rose-200/50 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-800/50",
+  SELESAI: "bg-emerald-50 text-emerald-600 border-emerald-200/50 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800/50",
   DITOLAK: "bg-muted text-muted-foreground border-muted-foreground/30",
 };
 
@@ -145,41 +145,41 @@ export default async function TiketPage({
   const totalPages = Math.ceil(totalHistory / pageSize);
 
   const renderStagingTable = (data: any[], teknisiData: any[]) => (
-    <div className="rounded-lg border overflow-x-auto bg-card">
+    <div className="rounded-xl border-0 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-2px_rgba(0,0,0,0.05)] overflow-x-auto bg-card">
       <table className="w-full text-sm">
         <thead className="bg-muted/60 border-b">
           <tr>
-            <th className="h-10 px-4 text-left font-medium">ID Staging</th>
-            <th className="h-10 px-4 text-left font-medium">Keluhan (Teks Asli)</th>
-            <th className="h-10 px-4 text-left font-medium">Prediksi NLP (Aset)</th>
-            <th className="h-10 px-4 text-left font-medium">Prediksi NLP (Lokasi)</th>
-            <th className="h-10 px-4 text-left font-medium">Severity</th>
-            <th className="h-10 px-4 text-center font-medium">Aksi</th>
+            <th className="h-12 px-4 text-left font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">ID Staging</th>
+            <th className="h-12 px-4 text-left font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">Keluhan (Teks Asli)</th>
+            <th className="h-12 px-4 text-left font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">Prediksi NLP (Aset)</th>
+            <th className="h-12 px-4 text-left font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">Prediksi NLP (Lokasi)</th>
+            <th className="h-12 px-4 text-left font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">Severity</th>
+            <th className="h-12 px-4 text-center font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">Aksi</th>
           </tr>
         </thead>
         <tbody className="[&_tr:last-child]:border-0">
           {data.map((t) => (
-            <tr key={t.id} className="border-b transition-colors hover:bg-muted/50">
-              <td className="p-4 align-middle font-heading text-xs">{t.id}</td>
-              <td className="p-4 align-middle text-xs max-w-[200px] truncate" title={t.teksKeluhan}>
+            <tr key={t.id} className="border-b transition-colors hover:bg-blue-50/50 dark:hover:bg-blue-900/20 even:bg-slate-50/50 dark:even:bg-slate-800/30">
+              <td className="py-4 px-4 align-middle font-heading text-xs text-primary font-bold hover:underline cursor-pointer">{t.id}</td>
+              <td className="py-4 px-4 align-middle text-xs max-w-[200px] truncate" title={t.teksKeluhan}>
                 {t.teksKeluhan || "-"}
               </td>
-              <td className="p-4 align-middle">
+              <td className="py-4 px-4 align-middle">
                 <div className="text-xs">
                   <span className="font-medium block">{t.predTipeAset}</span>
                   <span className="text-muted-foreground">{t.predKategoriDept}</span>
                 </div>
               </td>
-              <td className="p-4 align-middle text-xs">
+              <td className="py-4 px-4 align-middle text-xs">
                 <div>Gedung: <span className="font-medium">{t.predLokasiGedung}</span></div>
                 <div className="text-muted-foreground">{t.predLokasiLantai.replace("Lantai ", "Lt. ")}, {t.predLokasiZona}</div>
               </td>
-              <td className="p-4 align-middle">
+              <td className="py-4 px-4 align-middle">
                 <Badge variant="outline" className={`text-[10px] ${t.predSeverityAwal === 'Tinggi' ? 'bg-destructive/15 text-destructive border-destructive/30' : t.predSeverityAwal === 'Sedang' ? 'bg-warning/15 text-warning border-warning/30' : 'bg-primary/15 text-primary border-primary/30'}`}>
                   {t.predSeverityAwal}
                 </Badge>
               </td>
-              <td className="p-4 align-middle text-center">
+              <td className="py-4 px-4 align-middle text-center">
                 <div className="flex justify-center gap-2">
                   <AssignAssetModal staging={t} teknisiList={teknisiData} />
                 </div>
@@ -199,38 +199,38 @@ export default async function TiketPage({
   );
 
   const renderTable = (data: any[]) => (
-    <div className="rounded-lg border overflow-x-auto bg-card">
+    <div className="rounded-xl border-0 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-2px_rgba(0,0,0,0.05)] overflow-x-auto bg-card">
       <table className="w-full text-sm">
         <thead className="bg-muted/60 border-b">
           <tr>
-            <th className="h-10 px-4 text-left font-medium">ID Tiket</th>
-            <th className="h-10 px-4 text-left font-medium">Aset</th>
-            <th className="h-10 px-4 text-left font-medium">Keluhan Awal</th>
-            <th className="h-10 px-4 text-left font-medium">Diagnosis (Kerusakan)</th>
-            <th className="h-10 px-4 text-left font-medium">Gedung</th>
-            <th className="h-10 px-4 text-left font-medium">Lantai</th>
-            <th className="h-10 px-4 text-left font-medium">Zona</th>
-            <th className="h-10 px-4 text-left font-medium">Status</th>
-            <th className="h-10 px-4 text-left font-medium">Teknisi</th>
-            <th className="h-10 px-4 text-center font-medium">Aksi</th>
+            <th className="h-12 px-4 text-left font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">ID Tiket</th>
+            <th className="h-12 px-4 text-left font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">Aset</th>
+            <th className="h-12 px-4 text-left font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">Keluhan Awal</th>
+            <th className="h-12 px-4 text-left font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">Diagnosis (Kerusakan)</th>
+            <th className="h-12 px-4 text-left font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">Gedung</th>
+            <th className="h-12 px-4 text-left font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">Lantai</th>
+            <th className="h-12 px-4 text-left font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">Zona</th>
+            <th className="h-12 px-4 text-left font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">Status</th>
+            <th className="h-12 px-4 text-left font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">Teknisi</th>
+            <th className="h-12 px-4 text-center font-semibold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">Aksi</th>
           </tr>
         </thead>
         <tbody className="[&_tr:last-child]:border-0">
           {data.map((t) => (
-            <tr key={t.id} className="border-b transition-colors hover:bg-muted/50">
-              <td className="p-4 align-middle font-heading text-xs">{t.id}</td>
-              <td className="p-4 align-middle">
+            <tr key={t.id} className="border-b transition-colors hover:bg-blue-50/50 dark:hover:bg-blue-900/20 even:bg-slate-50/50 dark:even:bg-slate-800/30">
+              <td className="py-4 px-4 align-middle font-heading text-xs text-primary font-bold hover:underline cursor-pointer">{t.id}</td>
+              <td className="py-4 px-4 align-middle">
                 <div className="text-xs">
-                  <span className="font-medium text-sm block">{t.tipe || "Aset"}</span>
+                  <span className="font-medium text-sm block text-primary hover:underline cursor-pointer">{t.tipe || "Aset"}</span>
                   <span className="font-heading text-[10px] text-muted-foreground block">{t.namaAset} ({t.idAset})</span>
                 </div>
               </td>
-              <td className="p-4 align-middle text-xs max-w-[200px] truncate" title={stagingMap.get(t.id) || "-"}>{stagingMap.get(t.id) || "-"}</td>
-              <td className="p-4 align-middle text-xs max-w-[150px] truncate" title={t.jenisKerusakan}>{t.jenisKerusakan}</td>
-              <td className="p-4 align-middle text-xs font-medium">{t.asset?.lokasiGedung || "-"}</td>
-              <td className="p-4 align-middle text-xs text-muted-foreground">{t.asset?.lokasiLantai && t.asset.lokasiLantai !== "-" ? `Lt. ${t.asset.lokasiLantai}` : "-"}</td>
-              <td className="p-4 align-middle text-xs">{t.asset?.lokasiZona || "-"}</td>
-              <td className="p-4 align-middle">
+              <td className="py-4 px-4 align-middle text-xs max-w-[200px] truncate" title={stagingMap.get(t.id) || "-"}>{stagingMap.get(t.id) || "-"}</td>
+              <td className="py-4 px-4 align-middle text-xs max-w-[150px] truncate" title={t.jenisKerusakan}>{t.jenisKerusakan}</td>
+              <td className="py-4 px-4 align-middle text-xs font-medium">{t.asset?.lokasiGedung || "-"}</td>
+              <td className="py-4 px-4 align-middle text-xs text-muted-foreground">{t.asset?.lokasiLantai && t.asset.lokasiLantai !== "-" ? `Lt. ${t.asset.lokasiLantai}` : "-"}</td>
+              <td className="py-4 px-4 align-middle text-xs">{t.asset?.lokasiZona || "-"}</td>
+              <td className="py-4 px-4 align-middle">
                 <Badge variant="outline" className={`text-[10px] ${statusColor[t.statusTiket]}`}>
                   {t.statusTiket.replace(/_/g, " ")}
                 </Badge>
@@ -240,8 +240,8 @@ export default async function TiketPage({
                   </Badge>
                 )}
               </td>
-              <td className="p-4 align-middle text-xs">{t.teknisiPelaksana?.nama || "-"}</td>
-              <td className="p-4 align-middle text-center">
+              <td className="py-4 px-4 align-middle text-xs">{t.teknisiPelaksana?.nama || "-"}</td>
+              <td className="py-4 px-4 align-middle text-center">
                 <div className="flex justify-center gap-2">
 
                   {/* AKSI TEKNISI */}
@@ -347,21 +347,24 @@ export default async function TiketPage({
             <TabsList className="mb-6 grid w-full max-w-2xl grid-cols-3 p-1 bg-muted/50 rounded-lg">
               <TabsTrigger 
                 value="staging" 
-                className="font-medium gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md transition-all rounded-md py-2"
+                className="font-medium gap-2 text-slate-500 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md transition-all rounded-md py-2"
               >
-                <MessageSquareWarning className="h-4 w-4" /> Staging NLP ({stagingTickets.length})
+                <MessageSquareWarning className="h-4 w-4" /> Staging NLP
+                <span className="ml-1 inline-flex items-center justify-center bg-cyan-500 text-white text-[10px] font-bold h-5 px-1.5 min-w-[20px] rounded-full">{stagingTickets.length}</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="aktif" 
-                className="font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md transition-all rounded-md py-2"
+                className="font-medium text-slate-500 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md transition-all rounded-md py-2"
               >
-                Tiket Aktif ({activeTickets.length})
+                Tiket Aktif
+                <span className="ml-1.5 inline-flex items-center justify-center bg-cyan-500 text-white text-[10px] font-bold h-5 px-1.5 min-w-[20px] rounded-full">{activeTickets.length}</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="riwayat" 
-                className="font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md transition-all rounded-md py-2"
+                className="font-medium text-slate-500 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md transition-all rounded-md py-2"
               >
-                Riwayat Selesai ({totalHistory})
+                Riwayat Selesai
+                <span className="ml-1.5 inline-flex items-center justify-center bg-cyan-500 text-white text-[10px] font-bold h-5 px-1.5 min-w-[20px] rounded-full">{totalHistory}</span>
               </TabsTrigger>
             </TabsList>
             <TabsContent value="staging" className="m-0 animate-fade-in-up">

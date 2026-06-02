@@ -132,7 +132,7 @@ export function AssetTable({
         )}
 
         {/* Table */}
-        <div className="rounded-lg border overflow-x-auto">
+        <div className="rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent bg-muted/60">

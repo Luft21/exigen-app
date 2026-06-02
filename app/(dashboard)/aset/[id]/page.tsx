@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { masterAssets, assetComplaints, formatDate, formatRupiah } from "@/lib/data";
 import { AssetHealthCard } from "@/components/asset-health-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { SeverityBadge } from "@/components/severity-badge";
 import {
   Table,
   TableBody,
@@ -29,13 +29,6 @@ export async function generateMetadata({ params }: PageProps) {
       : "Aset tidak ditemukan dalam database.",
   };
 }
-
-const severityColor: Record<string, string> = {
-  Ringan: "bg-success/15 text-success border-success/30",
-  Sedang: "bg-watch/15 text-watch border-watch/30",
-  Berat: "bg-warning/15 text-warning border-warning/30",
-  Kritis: "bg-destructive/15 text-destructive border-destructive/30",
-};
 
 export default async function AssetDetailPage({ params }: PageProps) {
   const { id } = await params;
@@ -111,12 +104,7 @@ export default async function AssetDetailPage({ params }: PageProps) {
                         {c.jenisKerusakan}
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={`text-[9px] ${severityColor[c.severity]}`}
-                        >
-                          {c.severity}
-                        </Badge>
+                        <SeverityBadge severity={c.severity} />
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
                         {c.penyebab}

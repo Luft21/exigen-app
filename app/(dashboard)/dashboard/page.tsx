@@ -82,7 +82,7 @@ export default async function OverviewPage() {
     <div className="space-y-6">
       <div>
         <h2 className="font-heading text-xl font-bold tracking-tight">Overview</h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           Ringkasan kesehatan aset dan prediksi umur dari model Random Forest Regressor.
         </p>
       </div>

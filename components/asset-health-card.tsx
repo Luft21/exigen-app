@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { HealthGauge } from "@/components/health-gauge";
 import { StatusBadge } from "@/components/status-badge";
+import { SeverityBadge } from "@/components/severity-badge";
 import type { MasterAsset, AssetComplaint } from "@/lib/data";
 import { assetComplaints, formatDate, formatRupiah } from "@/lib/data";
 import {
@@ -17,13 +18,6 @@ import {
 interface AssetHealthCardProps {
   asset: MasterAsset;
 }
-
-const severityColor: Record<string, string> = {
-  Ringan: "bg-success/15 text-success border-success/30",
-  Sedang: "bg-watch/15 text-watch border-watch/30",
-  Berat: "bg-warning/15 text-warning border-warning/30",
-  Kritis: "bg-destructive/15 text-destructive border-destructive/30",
-};
 
 export function AssetHealthCard({ asset }: AssetHealthCardProps) {
   const complaints = assetComplaints
@@ -83,36 +77,36 @@ export function AssetHealthCard({ asset }: AssetHealthCardProps) {
 
           {/* Info Grid */}
           <div className="flex-1 w-full">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded-lg bg-muted/50 p-3">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
+              <div className="flex flex-col border-l-2 border-primary/20 pl-3">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Merek / Model
                 </span>
-                <span className="font-medium text-xs mt-0.5 block">
+                <span className="font-medium text-xs mt-0.5 text-foreground/90">
                   {asset.merek} {asset.model}
                 </span>
               </div>
-              <div className="rounded-lg bg-muted/50 p-3">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+              <div className="flex flex-col border-l-2 border-primary/20 pl-3">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Tanggal Instalasi
                 </span>
-                <span className="font-medium text-xs mt-0.5 block">
+                <span className="font-medium text-xs mt-0.5 text-foreground/90">
                   {formatDate(asset.tanggalInstalasi)}
                 </span>
               </div>
-              <div className="rounded-lg bg-muted/50 p-3">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+              <div className="flex flex-col border-l-2 border-primary/20 pl-3">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Tingkat Kekritisan
                 </span>
-                <span className="font-medium text-xs mt-0.5 block">
+                <span className="font-medium text-xs mt-0.5 text-foreground/90">
                   {asset.tingkatKekritisan}
                 </span>
               </div>
-              <div className="rounded-lg bg-muted/50 p-3">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+              <div className="flex flex-col border-l-2 border-primary/20 pl-3">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Zona
                 </span>
-                <span className="font-medium text-xs mt-0.5 block">
+                <span className="font-medium text-xs mt-0.5 text-foreground/90">
                   {asset.lokasiZona}
                 </span>
               </div>
@@ -137,12 +131,7 @@ export function AssetHealthCard({ asset }: AssetHealthCardProps) {
                           <span className="font-medium truncate">
                             {c.jenisKerusakan}
                           </span>
-                          <Badge
-                            variant="outline"
-                            className={`text-[9px] ${severityColor[c.severity]}`}
-                          >
-                            {c.severity}
-                          </Badge>
+                          <SeverityBadge severity={c.severity} className="text-[9px]" />
                         </div>
                         <span className="text-muted-foreground text-[10px]">
                           {formatDate(c.tanggalSelesai)} · {formatRupiah(c.biayaPerbaikan)}
