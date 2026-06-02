@@ -167,16 +167,23 @@ export async function GET() {
           const sanitizedId = item.id.replace(/[^a-zA-Z0-9-_]/g, '');
           const sisaUmur = Number(item.sisaUmurHari);
           const dateStr = item.estimasiPenggantian.toISOString();
-          return `('${sanitizedId}', ${sisaUmur}, '${dateStr}'::timestamp)`;
+          
+          let health = "Healthy";
+          if (sisaUmur <= 30) health = "Critical";
+          else if (sisaUmur <= 90) health = "Warning";
+          else if (sisaUmur <= 180) health = "Watch";
+          
+          return `('${sanitizedId}', ${sisaUmur}, '${dateStr}'::timestamp, '${health}')`;
         }).join(",\n");
 
         const query = `
           UPDATE "MasterAsset" AS m SET
             "sisaUmurHari" = v.sisa_umur,
-            "estimasiPenggantian" = v.estimasi_penggantian
+            "estimasiPenggantian" = v.estimasi_penggantian,
+            "healthStatus" = v.health
           FROM (VALUES
             ${valueRows}
-          ) AS v(id, sisa_umur, estimasi_penggantian)
+          ) AS v(id, sisa_umur, estimasi_penggantian, health)
           WHERE m.id = v.id
         `;
 
@@ -188,11 +195,17 @@ export async function GET() {
         // Fallback: update individual jika query raw bermasalah
         for (const item of chunk) {
           try {
+            let fallbackHealth = "Healthy";
+            if (item.sisaUmurHari <= 30) fallbackHealth = "Critical";
+            else if (item.sisaUmurHari <= 90) fallbackHealth = "Warning";
+            else if (item.sisaUmurHari <= 180) fallbackHealth = "Watch";
+
             await prisma.masterAsset.update({
               where: { id: item.id },
               data: {
                 sisaUmurHari: item.sisaUmurHari,
                 estimasiPenggantian: item.estimasiPenggantian,
+                healthStatus: fallbackHealth,
               },
             });
             updatedCount++;

@@ -47,9 +47,9 @@ export function HealthDonutChart({ data }: { data: { name: string, value: number
       <CardHeader>
         <CardTitle className="font-heading text-sm text-foreground/80">Distribusi Status Kesehatan</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-col sm:flex-row items-center gap-6">
-          <ResponsiveContainer width={180} height={180}>
+      <CardContent className="p-6">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-8 xl:gap-12">
+          <ResponsiveContainer width={220} height={220}>
             <PieChart>
               <defs>
                 <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
@@ -60,8 +60,8 @@ export function HealthDonutChart({ data }: { data: { name: string, value: number
                 data={data}
                 cx="50%"
                 cy="50%"
-                innerRadius={65}
-                outerRadius={85}
+                innerRadius={75}
+                outerRadius={105}
                 paddingAngle={4}
                 dataKey="value"
                 strokeWidth={0}
@@ -75,8 +75,8 @@ export function HealthDonutChart({ data }: { data: { name: string, value: number
                     const { cx, cy } = viewBox as any;
                     return (
                       <text x={cx} y={cy} fill="hsl(var(--foreground))" className="font-heading font-bold" textAnchor="middle" dominantBaseline="central">
-                        <tspan x={cx} y={cy} dy="-2" fontSize="24">{total}</tspan>
-                        <tspan x={cx} y={cy} dy="20" fontSize="10" fill="hsl(var(--muted-foreground))">Total Aset</tspan>
+                        <tspan x={cx} y={cy} dy="-4" fontSize="32">{total}</tspan>
+                        <tspan x={cx} y={cy} dy="24" fontSize="12" fill="hsl(var(--muted-foreground))">Total Aset</tspan>
                       </text>
                     );
                   }}
@@ -85,16 +85,16 @@ export function HealthDonutChart({ data }: { data: { name: string, value: number
               <Tooltip content={<CustomTooltip />} />
             </PieChart>
           </ResponsiveContainer>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4 flex-1 justify-center w-full min-w-[160px]">
             {data.map((d) => (
-              <div key={d.name} className="flex items-center gap-2 text-sm group">
+              <div key={d.name} className="flex items-center gap-3 text-sm sm:text-base group">
                 <span
-                  className="h-3 w-3 rounded-full shadow-sm transition-transform group-hover:scale-125"
+                  className="h-4 w-4 rounded-full shadow-sm transition-transform group-hover:scale-110"
                   style={{ backgroundColor: d.fill }}
                 />
-                <span className="text-muted-foreground group-hover:text-foreground transition-colors">{d.name}</span>
-                <span className="font-heading font-semibold ml-auto text-foreground/90">
-                  {d.value} <span className="text-[10px] text-muted-foreground">/ {total}</span>
+                <span className="text-muted-foreground group-hover:text-foreground transition-colors font-medium">{d.name}</span>
+                <span className="font-heading font-bold ml-auto text-foreground/90 text-base sm:text-lg">
+                  {d.value} <span className="text-[11px] sm:text-xs text-muted-foreground font-medium">/ {total}</span>
                 </span>
               </div>
             ))}
@@ -109,10 +109,10 @@ export function SisaUmurBarChart({ data }: { data: any[] }) {
   return (
     <Card className="animate-fade-in-up" style={{ animationDelay: "500ms" }}>
       <CardHeader>
-        <CardTitle className="font-heading text-sm text-foreground/80">Rata-rata Sisa Umur per Kategori</CardTitle>
+        <CardTitle className="font-heading text-sm text-foreground/80">Top 10 Kategori Sisa Umur Terpendek</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={250}>
+        <ResponsiveContainer width="100%" height={320}>
           <BarChart data={data} layout="vertical" barSize={24} margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="barGradient" x1="0" y1="0" x2="1" y2="0">
@@ -120,7 +120,7 @@ export function SisaUmurBarChart({ data }: { data: any[] }) {
                 <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.8}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/50" />
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" strokeOpacity={0.6} />
             <XAxis
               type="number"
               tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
@@ -134,7 +134,7 @@ export function SisaUmurBarChart({ data }: { data: any[] }) {
               tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
               axisLine={false}
               tickLine={false}
-              width={100}
+              width={120}
             />
             <Tooltip cursor={{ fill: 'hsl(var(--muted)/0.3)' }} content={<CustomTooltip />} />
             <Bar dataKey="rataRata" fill="url(#barGradient)" radius={[0, 4, 4, 0]} className="hover:opacity-80 transition-opacity" />
@@ -160,7 +160,7 @@ export function DamageFrequencyChart({ data }: { data: any[] }) {
                 <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.6} />
             <XAxis
               dataKey="bulan"
               tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}

@@ -1,6 +1,6 @@
 import { KPICards } from "@/components/kpi-cards";
 import { AssetHealthCard } from "@/components/asset-health-card";
-import { HealthDonutChart, SisaUmurBarChart, DamageFrequencyChart } from "@/components/charts";
+import { HealthDonutChart, DamageFrequencyChart } from "@/components/charts";
 import prisma from "@/lib/prisma";
 
 export const metadata = {
@@ -12,7 +12,7 @@ export default async function OverviewPage() {
   const criticalAssets = await prisma.masterAsset.findMany({
     where: { status: "Aktif" },
     orderBy: { sisaUmurHari: "asc" },
-    take: 3,
+    take: 5,
   });
 
   const [totalAset, asetKritis, avgUmur] = await Promise.all([
@@ -30,10 +30,18 @@ export default async function OverviewPage() {
     rataRata: Math.round(avgUmur._avg.sisaUmurHari || 0),
   };
 
-  const healthGroupBy = await prisma.masterAsset.groupBy({
-    by: ['healthStatus'],
+  const allAssetsHealth = await prisma.masterAsset.findMany({
     where: { status: "Aktif" },
-    _count: true,
+    select: { sisaUmurHari: true }
+  });
+
+  const healthCounts = { Healthy: 0, Watch: 0, Warning: 0, Critical: 0 };
+  allAssetsHealth.forEach(a => {
+    const rul = a.sisaUmurHari || 0;
+    if (rul <= 30) healthCounts.Critical++;
+    else if (rul <= 90) healthCounts.Warning++;
+    else if (rul <= 180) healthCounts.Watch++;
+    else healthCounts.Healthy++;
   });
 
   const healthColors: Record<string, string> = {
@@ -43,40 +51,40 @@ export default async function OverviewPage() {
     Critical: "hsl(0 84% 60%)",
   };
 
-  const healthData = healthGroupBy.map(h => ({
-    name: h.healthStatus,
-    value: h._count,
-    fill: healthColors[h.healthStatus] || "hsl(210 40% 50%)",
-  }));
+  const healthData = Object.entries(healthCounts)
+    .filter(([_, count]) => count > 0)
+    .map(([status, count]) => ({
+      name: status,
+      value: count,
+      fill: healthColors[status] || "hsl(210 40% 50%)",
+    }));
 
-  const categoryGroupBy = await prisma.masterAsset.groupBy({
-    by: ['kategori'],
-    where: { status: "Aktif" },
-    _avg: { sisaUmurHari: true },
-  });
 
-  const barData = categoryGroupBy.map(c => ({
-    kategori: c.kategori,
-    rataRata: Math.round(c._avg.sisaUmurHari || 0),
-  }));
 
   const complaints = await prisma.assetComplaint.findMany({
-    select: { tanggalPerencanaan: true }
+    select: { tanggalPerencanaan: true },
   });
 
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
   const frequencyMap: Record<string, number> = {};
 
   complaints.forEach(c => {
+    if (!c.tanggalPerencanaan) return;
     const d = new Date(c.tanggalPerencanaan);
-    const label = `${monthNames[d.getMonth()]} ${d.getFullYear().toString().slice(-2)}`;
-    frequencyMap[label] = (frequencyMap[label] || 0) + 1;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    frequencyMap[key] = (frequencyMap[key] || 0) + 1;
   });
 
-  const damageData = Object.entries(frequencyMap).map(([bulan, jumlah]) => ({
-    bulan,
-    jumlah
-  })).slice(-12);
+  const sortedKeys = Object.keys(frequencyMap).sort();
+
+  const damageData = sortedKeys.map(key => {
+    const [year, month] = key.split('-');
+    const label = `${monthNames[parseInt(month, 10) - 1]} ${year.slice(-2)}`;
+    return {
+      bulan: label,
+      jumlah: frequencyMap[key]
+    };
+  }).slice(-12);
 
   return (
     <div className="space-y-6">
@@ -89,20 +97,26 @@ export default async function OverviewPage() {
 
       <KPICards data={kpiData} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <HealthDonutChart data={healthData} />
-        <SisaUmurBarChart data={barData} />
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="lg:col-span-2 flex">
+          <div className="w-full">
+            <HealthDonutChart data={healthData} />
+          </div>
+        </div>
+        <div className="lg:col-span-3 flex">
+          <div className="w-full">
+            <DamageFrequencyChart data={damageData} />
+          </div>
+        </div>
       </div>
-
-      <DamageFrequencyChart data={damageData} />
 
       <div>
         <h3 className="font-heading text-sm font-semibold tracking-tight mb-3">
           Aset Perlu Perhatian Segera
         </h3>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
           {criticalAssets.map((asset) => (
-            <AssetHealthCard key={asset.id} asset={asset as any} />
+            <AssetHealthCard key={asset.id} asset={asset as any} compact={true} />
           ))}
         </div>
       </div>

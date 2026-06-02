@@ -16,21 +16,23 @@ interface KPICardProps {
 function KPICard({ title, value, subtitle, icon, accent, delay = 0 }: KPICardProps) {
   return (
     <Card className="animate-fade-in-up overflow-hidden" style={{ animationDelay: `${delay}ms` }}>
-      <CardContent className="py-6 px-5">
-        <div className="flex items-start justify-between">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-              {title}
-            </span>
-            <span className={`font-heading text-4xl font-extrabold tracking-tight ${accent || "text-foreground"}`}>
-              {value}
-            </span>
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{subtitle}</span>
-          </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+      <CardContent className="p-4 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             {icon}
           </div>
+          <div className="flex flex-col">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-medium mb-0.5">
+              {title}
+            </span>
+            <div className="flex items-baseline gap-2">
+              <span className={`font-heading text-2xl font-extrabold tracking-tight leading-none ${accent || "text-foreground"}`}>
+                {value}
+              </span>
+            </div>
+          </div>
         </div>
+        <span className="text-xs font-medium text-slate-500/70 hidden lg:block whitespace-nowrap">{subtitle}</span>
       </CardContent>
     </Card>
   );

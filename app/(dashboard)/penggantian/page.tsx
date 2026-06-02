@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { ArrowRight } from "lucide-react";
 import prisma from "@/lib/prisma";
 
@@ -73,30 +74,65 @@ export default async function PenggantianPage({
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent bg-muted/60 border-b">
-                  <TableHead>ID Lama</TableHead>
-                  <TableHead>Tipe Aset</TableHead>
-                  <TableHead>Kategori</TableHead>
-                  <TableHead>Nama Aset Lama</TableHead>
-                  <TableHead className="text-center">→</TableHead>
-                  <TableHead>ID Baru</TableHead>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead className="text-right">Biaya</TableHead>
+                  <TableHead className="min-w-[300px]">Proses Penggantian</TableHead>
+                  <TableHead>Kategori & Tipe</TableHead>
+                  <TableHead>Alasan</TableHead>
+                  <TableHead className="text-right">Logistik (Biaya & Tgl)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {replacementHistoryDb.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="font-heading font-bold text-primary hover:underline cursor-pointer">{r.idAsetLama}</TableCell>
-                    <TableCell className="font-medium">{r.tipe}</TableCell>
-                    <TableCell className="text-muted-foreground">{r.kategori}</TableCell>
-                    <TableCell className="text-muted-foreground">{r.namaAsetLama}</TableCell>
-                    <TableCell className="text-center">
-                      <ArrowRight className="h-4 w-4 text-sky-500 font-bold mx-auto" />
+                    {/* Kolom 1: Proses Penggantian (Old -> New) */}
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        {/* Aset Lama (Muted/Grey) */}
+                        <div className="flex flex-col items-end text-muted-foreground opacity-80 min-w-[120px]">
+                          <span className="font-heading font-medium text-xs truncate max-w-[140px]" title={r.namaAsetLama}>
+                            {r.namaAsetLama || "Unknown"}
+                          </span>
+                          <span className="text-[10px]">ID: {r.idAsetLama}</span>
+                        </div>
+                        
+                        {/* Ikon Transisi */}
+                        <div className="bg-muted p-1.5 rounded-full shrink-0 flex items-center justify-center">
+                          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                        
+                        {/* Aset Baru (Bold/Accent) */}
+                        <div className="flex flex-col items-start min-w-[120px]">
+                          <span className="font-heading font-bold text-primary truncate max-w-[140px]">
+                            {r.idAsetBaru}
+                          </span>
+                          <span className="text-[10px] font-semibold text-primary/70">
+                            ASET BARU
+                          </span>
+                        </div>
+                      </div>
                     </TableCell>
-                    <TableCell className="font-heading text-primary font-bold hover:underline cursor-pointer">{r.idAsetBaru}</TableCell>
-                    <TableCell>{formatDate(r.tanggalPenggantian)}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-[200px] truncate">{r.alasanPenggantian}</TableCell>
-                    <TableCell className="font-heading text-right font-semibold">{formatRupiah(r.biayaPenggantian)}</TableCell>
+
+                    {/* Kolom 2: Info Aset */}
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-sm">{r.tipe}</span>
+                        <span className="text-xs text-muted-foreground">{r.kategori}</span>
+                      </div>
+                    </TableCell>
+
+                    {/* Kolom 3: Alasan Penggantian (Badge) */}
+                    <TableCell>
+                      <Badge variant="outline" className="bg-accent/30 text-accent-foreground border-accent/50 font-medium text-xs whitespace-nowrap max-w-[220px] truncate block overflow-hidden" title={r.alasanPenggantian}>
+                        {r.alasanPenggantian}
+                      </Badge>
+                    </TableCell>
+
+                    {/* Kolom 4: Logistik */}
+                    <TableCell className="text-right">
+                      <div className="flex flex-col items-end">
+                        <span className="font-heading font-bold text-sm">{formatRupiah(r.biayaPenggantian)}</span>
+                        <span className="text-xs text-muted-foreground">{formatDate(r.tanggalPenggantian)}</span>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

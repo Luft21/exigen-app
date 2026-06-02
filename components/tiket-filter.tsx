@@ -13,15 +13,27 @@ export function TiketFilter({
   zonaList,
   kerusakanList,
   teknisiList,
+  activeTab,
 }: {
   gedungList: string[];
   lantaiList: string[];
   zonaList: string[];
   kerusakanList: string[];
   teknisiList: { id: string; nama: string }[];
+  activeTab?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  let initialStatus = searchParams.get("status") || "";
+  
+  if (activeTab === "staging" && initialStatus !== "OPEN") {
+    initialStatus = "";
+  } else if (activeTab === "aktif" && !["MENUNGGU_TEKNISI", "PROSES_SERVIS", "MENUNGGU_APPROVAL_GANTI"].includes(initialStatus)) {
+    initialStatus = "";
+  } else if (activeTab === "riwayat" && !["SELESAI", "DITOLAK"].includes(initialStatus)) {
+    initialStatus = "";
+  }
 
   const [q, setQ] = useState(searchParams.get("q") || "");
   const [gedung, setGedung] = useState(searchParams.get("gedung") || "");
@@ -29,7 +41,9 @@ export function TiketFilter({
   const [zona, setZona] = useState(searchParams.get("zona") || "");
   const [kerusakan, setKerusakan] = useState(searchParams.get("kerusakan") || "");
   const [teknisi, setTeknisi] = useState(searchParams.get("teknisi") || "");
-  const [status, setStatus] = useState(searchParams.get("status") || "");
+  const [status, setStatus] = useState(initialStatus);
+
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleFilter = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -40,6 +54,7 @@ export function TiketFilter({
     if (kerusakan && kerusakan !== "all") params.set("kerusakan", kerusakan); else params.delete("kerusakan");
     if (teknisi && teknisi !== "all") params.set("teknisi", teknisi); else params.delete("teknisi");
     if (status && status !== "all") params.set("status", status); else params.delete("status");
+    if (activeTab) params.set("tab", activeTab);
     
     // reset page on filter
     params.delete("page");
@@ -65,9 +80,12 @@ export function TiketFilter({
     params.delete("teknisi");
     params.delete("status");
     params.delete("page");
+    if (activeTab) params.set("tab", activeTab);
     
     router.push(`?${params.toString()}`);
   };
+
+  const activeFiltersCount = [gedung, lantai, zona, kerusakan, teknisi].filter(v => v && v !== "all").length;
 
   return (
     <div className="space-y-4 mb-6">
@@ -88,69 +106,97 @@ export function TiketFilter({
         </div>
         
         <div className="flex flex-wrap xl:flex-nowrap items-center gap-2 xl:justify-end">
-          <Select value={gedung || "all"} onValueChange={setGedung}>
-          <SelectTrigger className="h-9"><SelectValue placeholder="Gedung" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Gedung</SelectItem>
-            {gedungList.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
-          </SelectContent>
-        </Select>
+          <Select value={status || "all"} onValueChange={setStatus}>
+            <SelectTrigger className="h-9 w-full sm:w-[150px]"><SelectValue placeholder="Status Tiket" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Status</SelectItem>
+              {(!activeTab || activeTab === "staging") && <SelectItem value="OPEN">OPEN</SelectItem>}
+              {(!activeTab || activeTab === "aktif") && <SelectItem value="MENUNGGU_TEKNISI">Menunggu Teknisi</SelectItem>}
+              {(!activeTab || activeTab === "aktif") && <SelectItem value="PROSES_SERVIS">Proses Servis</SelectItem>}
+              {(!activeTab || activeTab === "aktif") && <SelectItem value="MENUNGGU_APPROVAL_GANTI">Menunggu Approval</SelectItem>}
+              {(!activeTab || activeTab === "riwayat") && <SelectItem value="SELESAI">Selesai</SelectItem>}
+              {(!activeTab || activeTab === "riwayat") && <SelectItem value="DITOLAK">Ditolak</SelectItem>}
+            </SelectContent>
+          </Select>
 
-        <Select value={lantai || "all"} onValueChange={setLantai}>
-          <SelectTrigger className="h-9"><SelectValue placeholder="Lantai" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Lantai</SelectItem>
-            {lantaiList.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
-          </SelectContent>
-        </Select>
+          <Button 
+            variant={showAdvanced ? "secondary" : "outline"} 
+            size="sm" 
+            className="h-9 whitespace-nowrap"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+          >
+            <Filter className="h-3 w-3 mr-2" /> 
+            Filter Lanjutan
+            {activeFiltersCount > 0 && (
+              <span className="ml-2 inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                {activeFiltersCount}
+              </span>
+            )}
+          </Button>
 
-        <Select value={zona || "all"} onValueChange={setZona}>
-          <SelectTrigger className="h-9"><SelectValue placeholder="Zona" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Zona</SelectItem>
-            {zonaList.map(z => <SelectItem key={z} value={z}>{z}</SelectItem>)}
-          </SelectContent>
-        </Select>
-
-        <Select value={kerusakan || "all"} onValueChange={setKerusakan}>
-          <SelectTrigger className="h-9"><SelectValue placeholder="Jenis Kerusakan" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Kerusakan</SelectItem>
-            {kerusakanList.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
-          </SelectContent>
-        </Select>
-
-        <Select value={teknisi || "all"} onValueChange={setTeknisi}>
-          <SelectTrigger className="h-9"><SelectValue placeholder="Teknisi" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Teknisi</SelectItem>
-            {teknisiList.map(t => <SelectItem key={t.id} value={t.id}>{t.nama}</SelectItem>)}
-          </SelectContent>
-        </Select>
-
-        <Select value={status || "all"} onValueChange={setStatus}>
-          <SelectTrigger className="h-9"><SelectValue placeholder="Status Tiket" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Status</SelectItem>
-            <SelectItem value="OPEN">Staging: OPEN</SelectItem>
-            <SelectItem value="MENUNGGU_TEKNISI">Aktif: Menunggu Teknisi</SelectItem>
-            <SelectItem value="PROSES_SERVIS">Aktif: Proses Servis</SelectItem>
-            <SelectItem value="MENUNGGU_APPROVAL_GANTI">Aktif: Menunggu Approval</SelectItem>
-            <SelectItem value="SELESAI">Riwayat: Selesai</SelectItem>
-            <SelectItem value="DITOLAK">Riwayat: Ditolak</SelectItem>
-          </SelectContent>
-        </Select>
+          <Button variant="default" size="sm" onClick={handleFilter} className="h-9 whitespace-nowrap hidden sm:flex">
+            Terapkan
+          </Button>
         </div>
-
       </div>
-      <div className="flex justify-end gap-2 pt-2 border-t mt-4">
-        <Button variant="ghost" size="sm" onClick={handleReset} className="h-8">
-          <X className="h-3 w-3 mr-1" /> Reset
-        </Button>
-        <Button variant="default" size="sm" onClick={handleFilter} className="h-8">
+
+      {showAdvanced && (
+        <div className="flex flex-wrap items-center gap-2 pt-2 animate-in slide-in-from-top-2">
+          <Select value={gedung || "all"} onValueChange={setGedung}>
+            <SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="Gedung" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Gedung</SelectItem>
+              {gedungList.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={lantai || "all"} onValueChange={setLantai}>
+            <SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="Lantai" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Lantai</SelectItem>
+              {lantaiList.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={zona || "all"} onValueChange={setZona}>
+            <SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="Zona" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Zona</SelectItem>
+              {zonaList.map(z => <SelectItem key={z} value={z}>{z}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={kerusakan || "all"} onValueChange={setKerusakan}>
+            <SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="Jenis Kerusakan" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Kerusakan</SelectItem>
+              {kerusakanList.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={teknisi || "all"} onValueChange={setTeknisi}>
+            <SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="Teknisi" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Teknisi</SelectItem>
+              {teknisiList.map(t => <SelectItem key={t.id} value={t.id}>{t.nama}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2 pt-2 border-t mt-4 sm:hidden">
+        <Button variant="default" size="sm" onClick={handleFilter} className="h-9 w-full">
           Terapkan Filter
         </Button>
       </div>
+      
+      {activeFiltersCount > 0 && (
+        <div className="flex justify-end pt-1">
+          <Button variant="ghost" size="sm" onClick={handleReset} className="h-8 text-muted-foreground hover:text-foreground">
+            <X className="h-3 w-3 mr-1" /> Reset Filter
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

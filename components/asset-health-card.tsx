@@ -1,8 +1,10 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
 import { HealthGauge } from "@/components/health-gauge";
 import { StatusBadge } from "@/components/status-badge";
 import { SeverityBadge } from "@/components/severity-badge";
@@ -13,13 +15,15 @@ import {
   Calendar,
   Tag,
   AlertCircle,
+  Plus,
 } from "lucide-react";
 
 interface AssetHealthCardProps {
   asset: MasterAsset;
+  compact?: boolean;
 }
 
-export function AssetHealthCard({ asset }: AssetHealthCardProps) {
+export function AssetHealthCard({ asset, compact = false }: AssetHealthCardProps) {
   const complaints = assetComplaints
     .filter((c) => c.idAset === asset.id)
     .sort((a, b) => new Date(b.tanggalSelesai).getTime() - new Date(a.tanggalSelesai).getTime());
@@ -34,9 +38,9 @@ export function AssetHealthCard({ asset }: AssetHealthCardProps) {
               <span className="font-heading text-xs text-muted-foreground tracking-wider">
                 {asset.id}
               </span>
-              <StatusBadge status={asset.healthStatus} />
+              <StatusBadge status={asset.sisaUmurHari <= 30 ? "Critical" : asset.sisaUmurHari <= 90 ? "Warning" : asset.sisaUmurHari <= 180 ? "Watch" : "Healthy"} />
             </div>
-            <CardTitle className="font-heading text-lg font-bold leading-tight truncate">
+            <CardTitle className={`font-heading ${compact ? 'text-base' : 'text-lg'} font-bold leading-tight truncate`}>
               {asset.nama}
             </CardTitle>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
@@ -58,11 +62,11 @@ export function AssetHealthCard({ asset }: AssetHealthCardProps) {
       <CardContent className="pt-4">
         <div className="flex flex-col sm:flex-row items-center gap-6">
           {/* Gauge */}
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-2 shrink-0">
             <HealthGauge
               sisaUmurHari={asset.sisaUmurHari}
-              status={asset.healthStatus}
-              size={130}
+              status={asset.sisaUmurHari <= 30 ? "Critical" : asset.sisaUmurHari <= 90 ? "Warning" : asset.sisaUmurHari <= 180 ? "Watch" : "Healthy"}
+              size={compact ? 80 : 130}
             />
             <div className="text-center">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
@@ -79,41 +83,41 @@ export function AssetHealthCard({ asset }: AssetHealthCardProps) {
           <div className="flex-1 w-full">
             <div className="grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
               <div className="flex flex-col border-l-2 border-primary/20 pl-3">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                <span className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">
                   Merek / Model
                 </span>
-                <span className="font-medium text-xs mt-0.5 text-foreground/90">
+                <span className="font-semibold text-sm mt-0.5 text-slate-800 dark:text-slate-200">
                   {asset.merek} {asset.model}
                 </span>
               </div>
               <div className="flex flex-col border-l-2 border-primary/20 pl-3">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                <span className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">
                   Tanggal Instalasi
                 </span>
-                <span className="font-medium text-xs mt-0.5 text-foreground/90">
+                <span className="font-semibold text-sm mt-0.5 text-slate-800 dark:text-slate-200">
                   {formatDate(asset.tanggalInstalasi)}
                 </span>
               </div>
               <div className="flex flex-col border-l-2 border-primary/20 pl-3">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                <span className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">
                   Tingkat Kekritisan
                 </span>
-                <span className="font-medium text-xs mt-0.5 text-foreground/90">
+                <span className="font-semibold text-sm mt-0.5 text-slate-800 dark:text-slate-200">
                   {asset.tingkatKekritisan}
                 </span>
               </div>
               <div className="flex flex-col border-l-2 border-primary/20 pl-3">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                <span className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">
                   Zona
                 </span>
-                <span className="font-medium text-xs mt-0.5 text-foreground/90">
+                <span className="font-semibold text-sm mt-0.5 text-slate-800 dark:text-slate-200">
                   {asset.lokasiZona}
                 </span>
               </div>
             </div>
 
             {/* Mini Timeline */}
-            {complaints.length > 0 && (
+            {complaints.length > 0 && !compact && (
               <div className="mt-4">
                 <h4 className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
@@ -145,6 +149,14 @@ export function AssetHealthCard({ asset }: AssetHealthCardProps) {
           </div>
         </div>
       </CardContent>
+      <CardFooter className="bg-slate-50/50 dark:bg-slate-900/50 border-t px-5 py-3 flex justify-between items-center">
+         <span className="text-xs font-medium text-slate-500">Tindakan Cepat</span>
+         <Button size="sm" variant="default" className="h-8 text-xs bg-primary hover:bg-primary/90 text-primary-foreground" asChild>
+           <Link href={`/input-servis?idAset=${asset.id}`}>
+             <Plus className="h-3 w-3 mr-1.5" /> Buat Tiket
+           </Link>
+         </Button>
+      </CardFooter>
     </Card>
   );
 }

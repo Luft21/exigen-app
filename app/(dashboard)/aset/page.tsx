@@ -38,7 +38,15 @@ export default async function AsetPage({
   }
   
   if (params.status && params.status !== "all") {
-    whereClause.healthStatus = params.status;
+    if (params.status === "Critical") {
+      whereClause.sisaUmurHari = { lte: 30 };
+    } else if (params.status === "Warning") {
+      whereClause.sisaUmurHari = { gt: 30, lte: 90 };
+    } else if (params.status === "Watch") {
+      whereClause.sisaUmurHari = { gt: 90, lte: 180 };
+    } else if (params.status === "Healthy") {
+      whereClause.sisaUmurHari = { gt: 180 };
+    }
   }
 
   // Tarik data dari database beserta total count untuk pagination

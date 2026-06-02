@@ -136,8 +136,7 @@ export function AssetTable({
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent bg-muted/60">
-                <TableHead className="w-[100px]">ID</TableHead>
-                <TableHead>Nama</TableHead>
+                <TableHead>ASET</TableHead>
                 <TableHead className="hidden md:table-cell">Kategori</TableHead>
                 <TableHead className="hidden lg:table-cell">Lokasi</TableHead>
                 <TableHead className="text-right">Umur Skrg</TableHead>
@@ -148,9 +147,14 @@ export function AssetTable({
             </TableHeader>
             <TableBody>
               {initialAssets.map((a) => {
-                const canEdit = isTeknisi && EDITABLE_STATUSES.includes(a.healthStatus);
-                const isCritical = a.healthStatus === "Critical";
-                const isWarning  = a.healthStatus === "Warning";
+                let dynamicStatus = "Healthy";
+                if (a.sisaUmurHari <= 30) dynamicStatus = "Critical";
+                else if (a.sisaUmurHari <= 90) dynamicStatus = "Warning";
+                else if (a.sisaUmurHari <= 180) dynamicStatus = "Watch";
+
+                const canEdit = isTeknisi && EDITABLE_STATUSES.includes(dynamicStatus);
+                const isCritical = dynamicStatus === "Critical";
+                const isWarning  = dynamicStatus === "Warning";
 
                 return (
                   <TableRow
@@ -163,15 +167,19 @@ export function AssetTable({
                         : ""
                     }`}
                   >
-                    <TableCell className="font-heading text-xs">
-                      <Link
-                        href={`/aset/${a.id}`}
-                        className="hover:underline text-primary"
-                      >
-                        {a.id}
-                      </Link>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-sm text-slate-900 dark:text-slate-100">
+                          {a.tipe}
+                        </span>
+                        <Link
+                          href={`/aset/${a.id}`}
+                          className="text-xs text-muted-foreground font-mono hover:underline hover:text-primary mt-0.5"
+                        >
+                          {a.nama} ({a.id})
+                        </Link>
+                      </div>
                     </TableCell>
-                    <TableCell className="font-medium text-sm">{a.nama}</TableCell>
                     <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
                       {a.kategori}
                     </TableCell>
@@ -193,13 +201,13 @@ export function AssetTable({
                       {a.sisaUmurHari} hari
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={a.healthStatus} />
+                      <StatusBadge status={dynamicStatus} />
                     </TableCell>
                     {hasEditCol && (
                       <TableCell>
                         {canEdit ? (
                           <Link
-                            href={`/aset/${a.id}/edit`}
+                            href={`/input-servis?idAset=${a.id}`}
                             className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium border transition-colors ${
                               isCritical
                                 ? "text-destructive border-destructive/30 hover:bg-destructive/10"
@@ -220,7 +228,7 @@ export function AssetTable({
               {initialAssets.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={hasEditCol ? 8 : 7}
+                    colSpan={hasEditCol ? 7 : 6}
                     className="text-center text-muted-foreground py-8"
                   >
                     Tidak ada aset ditemukan.
