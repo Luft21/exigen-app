@@ -20,42 +20,71 @@ export default function KomplainGuestPage() {
   const [state, formAction, isPending] = useActionState(buatKomplainGuest, initialState);
   const [keluhan, setKeluhan] = useState("");
   const [isRecording, setIsRecording] = useState(false);
-  const [voiceUnsupported, setVoiceUnsupported] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        stream.getTracks().forEach((track) => track.stop());
+
+        setIsTranscribing(true);
+        try {
+          const formData = new FormData();
+          formData.append("file", blob, "audio.webm");
+
+          const res = await fetch("/api/ticket/transcribe", {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await res.json();
+          if (res.ok && data.success) {
+            setKeluhan((prev) => (prev ? prev + " " + data.text : data.text));
+          } else {
+            console.error("Transkripsi gagal:", data.error);
+            alert("Gagal melakukan transkripsi suara: " + (data.error || "Unknown error"));
+          }
+        } catch (error) {
+          console.error("Error transcribing:", error);
+          alert("Terjadi kesalahan sistem saat transkripsi suara.");
+        } finally {
+          setIsTranscribing(false);
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Gagal mengakses mikrofon", err);
+      alert("Tidak dapat mengakses mikrofon. Pastikan Anda telah memberikan izin.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
 
   const toggleVoice = () => {
     if (isRecording) {
-      recognitionRef.current?.stop();
-      setIsRecording(false);
-      return;
+      stopRecording();
+    } else {
+      startRecording();
     }
-
-    const SR =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
-
-    if (!SR) {
-      setVoiceUnsupported(true);
-      return;
-    }
-
-    const recognition = new SR();
-    recognition.lang = "id-ID";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    recognition.onresult = (event: any) => {
-      const text: string = event.results[0][0].transcript;
-      setKeluhan((prev) => (prev ? prev + " " + text : text));
-      setIsRecording(false);
-    };
-
-    recognition.onerror = () => setIsRecording(false);
-    recognition.onend = () => setIsRecording(false);
-
-    recognition.start();
-    recognitionRef.current = recognition;
-    setIsRecording(true);
   };
 
   /* ── Success state ─────────────────────────────────────── */
@@ -170,34 +199,34 @@ export default function KomplainGuestPage() {
                   </label>
 
                   {/* Voice button */}
-                  {!voiceUnsupported ? (
-                    <button
-                      type="button"
-                      onClick={toggleVoice}
-                      className={[
-                        "flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all",
-                        isRecording
-                          ? "bg-red-500/15 text-red-400 border border-red-500/30 animate-pulse"
-                          : "bg-white/5 text-white/50 border border-white/10 hover:text-white/70 hover:bg-white/10",
-                      ].join(" ")}
-                    >
-                      {isRecording ? (
-                        <>
-                          <MicOff className="h-3.5 w-3.5 shrink-0" />
-                          Stop
-                        </>
-                      ) : (
-                        <>
-                          <Mic className="h-3.5 w-3.5 shrink-0" />
-                          Voice
-                        </>
-                      )}
-                    </button>
-                  ) : (
-                    <span className="text-[11px] text-white/25">
-                      Voice not supported
-                    </span>
-                  )}
+                  <button
+                    type="button"
+                    onClick={toggleVoice}
+                    disabled={isTranscribing}
+                    className={[
+                      "flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all",
+                      isRecording
+                        ? "bg-red-500/15 text-red-400 border border-red-500/30 animate-pulse"
+                        : "bg-white/5 text-white/50 border border-white/10 hover:text-white/70 hover:bg-white/10",
+                    ].join(" ")}
+                  >
+                    {isRecording ? (
+                      <>
+                        <MicOff className="h-3.5 w-3.5 shrink-0" />
+                        Stop
+                      </>
+                    ) : isTranscribing ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                        Transcribing...
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="h-3.5 w-3.5 shrink-0" />
+                        Voice
+                      </>
+                    )}
+                  </button>
                 </div>
 
                 <textarea
@@ -214,6 +243,12 @@ export default function KomplainGuestPage() {
                   <p className="flex items-center gap-1.5 text-[11px] text-red-400">
                     <span className="h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse shrink-0" />
                     Listening… speak clearly in Indonesian or English.
+                  </p>
+                )}
+                {isTranscribing && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-blue-400">
+                    <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                    Transcribing audio using Whisper...
                   </p>
                 )}
               </div>

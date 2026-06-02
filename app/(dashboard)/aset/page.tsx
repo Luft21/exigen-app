@@ -22,7 +22,9 @@ export default async function AsetPage({
   const pageSize = 100; // Tampilkan 100 aset per halaman
 
   // Buat query filter Prisma
-  const whereClause: any = {};
+  const whereClause: any = {
+    status: "Aktif"
+  };
   
   if (params.q) {
     whereClause.OR = [
@@ -55,10 +57,12 @@ export default async function AsetPage({
   // Ambil data filter unik dari DB untuk dropdown
   const categoriesDb = await prisma.masterAsset.groupBy({
     by: ['kategori'],
+    where: { status: "Aktif" },
     _count: true
   });
   const locationsDb = await prisma.masterAsset.groupBy({
     by: ['lokasiGedung'],
+    where: { status: "Aktif" },
     _count: true
   });
 

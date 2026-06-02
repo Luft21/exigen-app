@@ -10,14 +10,18 @@ export const metadata = {
 
 export default async function OverviewPage() {
   const criticalAssets = await prisma.masterAsset.findMany({
+    where: { status: "Aktif" },
     orderBy: { sisaUmurHari: "asc" },
     take: 3,
   });
 
   const [totalAset, asetKritis, avgUmur] = await Promise.all([
-    prisma.masterAsset.count(),
-    prisma.masterAsset.count({ where: { sisaUmurHari: { lte: 30 } } }),
-    prisma.masterAsset.aggregate({ _avg: { sisaUmurHari: true } }),
+    prisma.masterAsset.count({ where: { status: "Aktif" } }),
+    prisma.masterAsset.count({ where: { status: "Aktif", sisaUmurHari: { lte: 30 } } }),
+    prisma.masterAsset.aggregate({
+      where: { status: "Aktif" },
+      _avg: { sisaUmurHari: true }
+    }),
   ]);
 
   const kpiData = {
@@ -28,6 +32,7 @@ export default async function OverviewPage() {
 
   const healthGroupBy = await prisma.masterAsset.groupBy({
     by: ['healthStatus'],
+    where: { status: "Aktif" },
     _count: true,
   });
 
@@ -46,6 +51,7 @@ export default async function OverviewPage() {
 
   const categoryGroupBy = await prisma.masterAsset.groupBy({
     by: ['kategori'],
+    where: { status: "Aktif" },
     _avg: { sisaUmurHari: true },
   });
 
