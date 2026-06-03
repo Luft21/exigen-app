@@ -113,7 +113,7 @@ export default function LandingPage() {
         </section>
 
         {/* Complaint Form Section (Scroll down) - FULL SCREEN, NO GLOW */}
-        <section id="komplain" className="w-full relative min-h-dvh flex items-center justify-center bg-[hsl(223,64%,8%)] border-t border-white/5 scroll-mt-0">
+        <section id="komplain" className="w-full relative min-h-dvh flex items-center justify-center bg-[hsl(223,64%,8%)] scroll-mt-0">
           <div className="relative z-10 w-full px-6 py-24">
             <ComplaintForm />
           </div>
