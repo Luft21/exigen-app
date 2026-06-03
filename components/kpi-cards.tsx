@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 
-import { Box, AlertTriangle, Clock } from "lucide-react";
+import { AlertTriangle, Clock, Wrench, RefreshCw, Inbox } from "lucide-react";
 
 interface KPICardProps {
   title: string;
@@ -15,56 +15,64 @@ interface KPICardProps {
 
 function KPICard({ title, value, subtitle, icon, accent, delay = 0 }: KPICardProps) {
   return (
-    <Card className="animate-fade-in-up overflow-hidden" style={{ animationDelay: `${delay}ms` }}>
-      <CardContent className="p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            {icon}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-medium mb-0.5">
+    <Card className="animate-fade-in-up overflow-hidden bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60 shadow-none hover:bg-slate-100/70 transition-colors" style={{ animationDelay: `${delay}ms` }}>
+      <CardContent className="p-2 sm:p-2.5 flex items-center gap-3 sm:gap-4 h-full">
+        <div className={`flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-background shadow-sm border border-border/50 ${accent || "text-primary"}`}>
+          {icon}
+        </div>
+        <div className="flex flex-col min-w-0 flex-1">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-bold truncate pr-2">
               {title}
             </span>
-            <div className="flex items-baseline gap-2">
-              <span className={`font-heading text-2xl font-extrabold tracking-tight leading-none ${accent || "text-foreground"}`}>
-                {value}
-              </span>
-            </div>
+            <span className="text-[9px] font-medium text-slate-400/80 truncate hidden xl:block">{subtitle}</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className={`font-heading text-lg sm:text-xl font-extrabold tracking-tight leading-none ${accent || "text-foreground"}`}>
+              {value}
+            </span>
+            <span className="text-[10px] font-medium text-slate-500/70 truncate xl:hidden">{subtitle}</span>
           </div>
         </div>
-        <span className="text-xs font-medium text-slate-500/70 hidden lg:block whitespace-nowrap">{subtitle}</span>
       </CardContent>
     </Card>
   );
 }
 
-export function KPICards({ data }: { data: { totalAset: number, asetKritis: number, rataRata: number } }) {
+export function KPICards({ data, className }: { data: { asetGanti: number, tiketMasuk: number, rataRata: number, asetMaintenance: number }, className?: string }) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className={`grid gap-3 sm:gap-4 ${className || "grid-cols-2 lg:grid-cols-4"}`}>
       <KPICard
-        title="Total Aset"
-        value={data.totalAset}
-        subtitle="Aset terdaftar"
-        icon={<Box className="h-5 w-5" />}
-        accent="text-blue-600 dark:text-blue-400"
+        title="Aset Ganti"
+        value={data.asetGanti}
+        subtitle="Sisa umur 0 hari"
+        icon={<RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />}
+        accent="text-destructive"
         delay={0}
       />
       <KPICard
-        title="Aset Kritis"
-        value={data.asetKritis}
-        subtitle="Sisa umur ≤ 30 hari"
-        icon={<AlertTriangle className="h-5 w-5" />}
-        accent="text-destructive"
+        title="Maintenance"
+        value={data.asetMaintenance}
+        subtitle="Sedang diperbaiki"
+        icon={<Wrench className="h-4 w-4 sm:h-5 sm:w-5" />}
+        accent="text-amber-600 dark:text-amber-400"
         delay={100}
       />
       <KPICard
-        title="Rata-rata Sisa Umur"
-        value={`${data.rataRata} hari`}
-        subtitle="Semua aset aktif"
-        icon={<Clock className="h-5 w-5" />}
+        title="Tiket Masuk"
+        value={data.tiketMasuk}
+        subtitle="Staging tiket NLP"
+        icon={<Inbox className="h-4 w-4 sm:h-5 sm:w-5" />}
+        accent="text-blue-600 dark:text-blue-400"
         delay={200}
       />
-
+      <KPICard
+        title="Rata Sisa Umur"
+        value={`${data.rataRata} hr`}
+        subtitle="Rata-rata umur aset"
+        icon={<Clock className="h-4 w-4 sm:h-5 sm:w-5" />}
+        delay={300}
+      />
     </div>
   );
 }

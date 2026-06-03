@@ -49,10 +49,10 @@ export function HealthGauge({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={`font-heading text-2xl font-bold ${colors.text}`}>
+        <span className={`text-3xl font-bold tracking-tight leading-none mb-0.5 ${colors.text}`}>
           {sisaUmurHari}
         </span>
-        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider leading-none">
           hari
         </span>
       </div>

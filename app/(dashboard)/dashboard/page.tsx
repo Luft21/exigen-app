@@ -1,6 +1,7 @@
 import { KPICards } from "@/components/kpi-cards";
 import { AssetHealthCard } from "@/components/asset-health-card";
-import { HealthDonutChart, DamageFrequencyChart } from "@/components/charts";
+import { HealthDonutChart, DamageFrequencyChart, LocationDamageChart } from "@/components/charts";
+import { GlobalFilter } from "@/components/global-filter";
 import prisma from "@/lib/prisma";
 
 export const metadata = {
@@ -8,26 +9,86 @@ export const metadata = {
   description: "Dashboard overview prediksi umur aset dan early warning system.",
 };
 
-export default async function OverviewPage() {
+type Props = {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}
+
+export default async function OverviewPage({ searchParams }: Props) {
+  const resolvedParams = await searchParams;
+  const period = resolvedParams?.period as string || "all";
+
+  let dateFilter: any = {};
+  if (period !== "all") {
+    const now = new Date();
+    let cutoff = new Date();
+    
+    if (period === "week") cutoff.setDate(now.getDate() - 7);
+    else if (period === "month") cutoff.setDate(now.getDate() - 30);
+    else if (period === "3month") cutoff.setDate(now.getDate() - 90);
+    else if (period === "6month") cutoff.setDate(now.getDate() - 180);
+    else if (period === "year") cutoff.setFullYear(now.getFullYear() - 1);
+    
+    if (period === "custom") {
+      const startParam = resolvedParams?.start as string;
+      const endParam = resolvedParams?.end as string;
+      
+      if (startParam) dateFilter.gte = new Date(startParam);
+      if (endParam) dateFilter.lte = new Date(endParam);
+    } else {
+      dateFilter.gte = cutoff;
+    }
+  }
+
   const criticalAssets = await prisma.masterAsset.findMany({
     where: { status: "Aktif" },
     orderBy: { sisaUmurHari: "asc" },
     take: 5,
   });
 
-  const [totalAset, asetKritis, avgUmur] = await Promise.all([
-    prisma.masterAsset.count({ where: { status: "Aktif" } }),
-    prisma.masterAsset.count({ where: { status: "Aktif", sisaUmurHari: { lte: 30 } } }),
+  const [asetGanti, avgUmur, maintenanceComplaints, complaintsWithAsset, tiketMasuk] = await Promise.all([
+    prisma.masterAsset.count({ where: { status: "Aktif", sisaUmurHari: { lte: 0 } } }),
     prisma.masterAsset.aggregate({
       where: { status: "Aktif" },
       _avg: { sisaUmurHari: true }
     }),
+    prisma.assetComplaint.findMany({
+      where: {
+        statusTiket: {
+          in: ["MENUNGGU_TEKNISI", "PROSES_SERVIS", "MENUNGGU_APPROVAL_GANTI"]
+        },
+        ...(period !== "all" && { tanggalPerencanaan: dateFilter })
+      },
+      select: { idAset: true }
+    }),
+    prisma.assetComplaint.findMany({
+      where: {
+        ...(period !== "all" && { tanggalPerencanaan: dateFilter })
+      },
+      select: {
+        tanggalPerencanaan: true,
+        asset: {
+          select: {
+            lokasiGedung: true
+          }
+        }
+      }
+    }),
+    prisma.komplainPerbaikan.count({ 
+      where: { 
+        statusStaging: { in: ["OPEN", "DRAFT"] },
+        ...(period !== "all" && { tanggalDibuat: dateFilter })
+      } 
+    })
   ]);
 
+  const maintenanceAsetIds = new Set(maintenanceComplaints.map(c => c.idAset).filter(Boolean));
+  const asetMaintenance = maintenanceAsetIds.size;
+
   const kpiData = {
-    totalAset,
-    asetKritis,
+    asetGanti,
+    tiketMasuk,
     rataRata: Math.round(avgUmur._avg.sisaUmurHari || 0),
+    asetMaintenance,
   };
 
   const allAssetsHealth = await prisma.masterAsset.findMany({
@@ -46,7 +107,7 @@ export default async function OverviewPage() {
 
   const healthColors: Record<string, string> = {
     Healthy: "hsl(142 71% 45%)",
-    Watch: "hsl(48 96% 53%)",
+    Watch: "hsl(38 92% 50%)",
     Warning: "hsl(25 95% 53%)",
     Critical: "hsl(0 84% 60%)",
   };
@@ -61,14 +122,10 @@ export default async function OverviewPage() {
 
 
 
-  const complaints = await prisma.assetComplaint.findMany({
-    select: { tanggalPerencanaan: true },
-  });
-
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
   const frequencyMap: Record<string, number> = {};
 
-  complaints.forEach(c => {
+  complaintsWithAsset.forEach(c => {
     if (!c.tanggalPerencanaan) return;
     const d = new Date(c.tanggalPerencanaan);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -86,28 +143,35 @@ export default async function OverviewPage() {
     };
   }).slice(-12);
 
+  const rawLocationData = complaintsWithAsset.map(c => ({
+    tanggal: c.tanggalPerencanaan ? c.tanggalPerencanaan.toISOString() : new Date().toISOString(),
+    lokasi: c.asset?.lokasiGedung || "Tidak Diketahui"
+  }));
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-heading text-xl font-bold tracking-tight">Overview</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Ringkasan kesehatan aset dan prediksi umur dari model Random Forest Regressor.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="font-heading text-xl font-bold tracking-tight">Overview</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Ringkasan kesehatan aset dan prediksi umur dari model Random Forest Regressor.
+          </p>
+        </div>
+        <GlobalFilter />
       </div>
 
-      <KPICards data={kpiData} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <HealthDonutChart data={healthData} large={true} />
+        </div>
+        <div className="lg:col-span-1">
+          <KPICards data={kpiData} className="grid-cols-1" />
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-2 flex">
-          <div className="w-full">
-            <HealthDonutChart data={healthData} />
-          </div>
-        </div>
-        <div className="lg:col-span-3 flex">
-          <div className="w-full">
-            <DamageFrequencyChart data={damageData} />
-          </div>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <LocationDamageChart rawData={rawLocationData} height={320} />
+        <DamageFrequencyChart data={damageData} height={320} />
       </div>
 
       <div>
