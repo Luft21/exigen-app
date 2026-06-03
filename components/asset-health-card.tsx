@@ -1,22 +1,12 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { HealthGauge } from "@/components/health-gauge";
 import { StatusBadge } from "@/components/status-badge";
-import { SeverityBadge } from "@/components/severity-badge";
-import type { MasterAsset, AssetComplaint } from "@/lib/data";
-import { assetComplaints, formatDate, formatRupiah } from "@/lib/data";
-import {
-  MapPin,
-  Calendar,
-  Tag,
-  AlertCircle,
-  Plus,
-} from "lucide-react";
+import type { MasterAsset } from "@/lib/data";
+import { Plus } from "lucide-react";
 
 interface AssetHealthCardProps {
   asset: MasterAsset;
@@ -24,139 +14,55 @@ interface AssetHealthCardProps {
 }
 
 export function AssetHealthCard({ asset, compact = false }: AssetHealthCardProps) {
-  const complaints = assetComplaints
-    .filter((c) => c.idAset === asset.id)
-    .sort((a, b) => new Date(b.tanggalSelesai).getTime() - new Date(a.tanggalSelesai).getTime());
+  // Determine status
+  const status = asset.sisaUmurHari <= 30 ? "Critical" : asset.sisaUmurHari <= 90 ? "Warning" : asset.sisaUmurHari <= 180 ? "Watch" : "Healthy";
 
   return (
-    <Card className="animate-fade-in-up overflow-hidden">
-      {/* Header */}
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-col gap-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-heading text-xs text-muted-foreground tracking-wider">
+    <Card className="animate-fade-in-up overflow-hidden border border-border/50 shadow-sm hover:shadow-md transition-shadow">
+      <CardContent className="p-4 flex flex-col gap-4 h-full justify-between">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col min-w-0 flex-1">
+            {/* Header: ID & Status */}
+            <div className="flex items-center gap-2 flex-wrap mb-1.5">
+              <span className="font-heading text-xs font-bold text-muted-foreground tracking-wider uppercase">
                 {asset.id}
               </span>
-              <StatusBadge status={asset.sisaUmurHari <= 30 ? "Critical" : asset.sisaUmurHari <= 90 ? "Warning" : asset.sisaUmurHari <= 180 ? "Watch" : "Healthy"} />
+              <StatusBadge status={status} />
             </div>
-            <CardTitle className={`font-heading ${compact ? 'text-base' : 'text-lg'} font-bold leading-tight truncate`}>
-              {asset.nama}
-            </CardTitle>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
-              <span className="flex items-center gap-1">
-                <Tag className="h-3 w-3" />
-                {asset.kategori} / {asset.subKategori} / {asset.tipe}
-              </span>
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                {asset.lokasiGedung}, {asset.lokasiLantai}
+            
+            {/* Highlight: Asset Type / Name */}
+            <h3 className="font-heading text-lg font-extrabold leading-tight text-foreground truncate mb-1" title={asset.tipe}>
+              {asset.tipe}
+            </h3>
+            
+            {/* Minor details (very small) */}
+            <div className="text-xs text-muted-foreground flex flex-col gap-0.5 mt-1.5 leading-snug">
+              <span className="truncate font-semibold text-foreground/80" title={asset.nama}>{asset.nama}</span>
+              <span className="truncate" title={`${asset.merek} ${asset.model}`}>{asset.merek} {asset.model}</span>
+              <span className="truncate" title={`${asset.kategori} / ${asset.subKategori}`}>{asset.kategori} / {asset.subKategori}</span>
+              <span className="truncate" title={`${asset.lokasiGedung}, Lt. ${asset.lokasiLantai}, Zona ${asset.lokasiZona}`}>
+                {asset.lokasiGedung}, Lt. {asset.lokasiLantai}, Zona {asset.lokasiZona}
               </span>
             </div>
           </div>
-        </div>
-      </CardHeader>
 
-      <Separator />
-
-      <CardContent className="pt-4">
-        <div className="flex flex-col sm:flex-row items-center gap-6">
-          {/* Gauge */}
-          <div className="flex flex-col items-center gap-2 shrink-0">
+          {/* Gauge (Big Circle) */}
+          <div className="shrink-0 -mt-1 -mr-1">
             <HealthGauge
               sisaUmurHari={asset.sisaUmurHari}
-              status={asset.sisaUmurHari <= 30 ? "Critical" : asset.sisaUmurHari <= 90 ? "Warning" : asset.sisaUmurHari <= 180 ? "Watch" : "Healthy"}
-              size={compact ? 80 : 130}
+              status={status}
+              size={90} 
             />
-            <div className="text-center">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                Estimasi Penggantian
-              </p>
-              <p className="font-heading text-xs font-semibold flex items-center gap-1 justify-center mt-0.5">
-                <Calendar className="h-3 w-3" />
-                {formatDate(asset.estimasiPenggantian)}
-              </p>
-            </div>
-          </div>
-
-          {/* Info Grid */}
-          <div className="flex-1 w-full">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
-              <div className="flex flex-col border-l-2 border-primary/20 pl-3">
-                <span className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">
-                  Merek / Model
-                </span>
-                <span className="font-semibold text-sm mt-0.5 text-slate-800 dark:text-slate-200">
-                  {asset.merek} {asset.model}
-                </span>
-              </div>
-              <div className="flex flex-col border-l-2 border-primary/20 pl-3">
-                <span className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">
-                  Tanggal Instalasi
-                </span>
-                <span className="font-semibold text-sm mt-0.5 text-slate-800 dark:text-slate-200">
-                  {formatDate(asset.tanggalInstalasi)}
-                </span>
-              </div>
-              <div className="flex flex-col border-l-2 border-primary/20 pl-3">
-                <span className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">
-                  Tingkat Kekritisan
-                </span>
-                <span className="font-semibold text-sm mt-0.5 text-slate-800 dark:text-slate-200">
-                  {asset.tingkatKekritisan}
-                </span>
-              </div>
-              <div className="flex flex-col border-l-2 border-primary/20 pl-3">
-                <span className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">
-                  Zona
-                </span>
-                <span className="font-semibold text-sm mt-0.5 text-slate-800 dark:text-slate-200">
-                  {asset.lokasiZona}
-                </span>
-              </div>
-            </div>
-
-            {/* Mini Timeline */}
-            {complaints.length > 0 && !compact && (
-              <div className="mt-4">
-                <h4 className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Riwayat Servis Terakhir
-                </h4>
-                <div className="space-y-2">
-                  {complaints.slice(0, 3).map((c: AssetComplaint) => (
-                    <div
-                      key={c.id}
-                      className="flex items-center gap-3 rounded-md border border-border/50 bg-card p-2 text-xs"
-                    >
-                      <div className="h-8 w-0.5 rounded-full bg-accent-custom shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium truncate">
-                            {c.jenisKerusakan}
-                          </span>
-                          <SeverityBadge severity={c.severity} className="text-[9px]" />
-                        </div>
-                        <span className="text-muted-foreground text-[10px]">
-                          {formatDate(c.tanggalSelesai)} · {formatRupiah(c.biayaPerbaikan)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
+
+        {/* Footer Button */}
+        <Button size="sm" variant="default" className="w-full h-8 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm mt-1" asChild>
+          <Link href={`/input-servis?idAset=${asset.id}`} className="flex items-center justify-center">
+            <Plus className="h-3.5 w-3.5 mr-1.5" /> Buat Tiket Perbaikan
+          </Link>
+        </Button>
       </CardContent>
-      <CardFooter className="bg-slate-50/50 dark:bg-slate-900/50 border-t px-5 py-3 flex justify-between items-center">
-         <span className="text-xs font-medium text-slate-500">Tindakan Cepat</span>
-         <Button size="sm" variant="default" className="h-8 text-xs bg-primary hover:bg-primary/90 text-primary-foreground" asChild>
-           <Link href={`/input-servis?idAset=${asset.id}`}>
-             <Plus className="h-3 w-3 mr-1.5" /> Buat Tiket
-           </Link>
-         </Button>
-      </CardFooter>
     </Card>
   );
 }

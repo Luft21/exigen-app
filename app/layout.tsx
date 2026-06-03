@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" className={`${jetbrainsMono.variable} ${workSans.variable} h-full`} suppressHydrationWarning>
+    <html lang="id" className={`${jetbrainsMono.variable} ${workSans.variable} h-full scroll-smooth`} suppressHydrationWarning>
       <body className="min-h-full bg-background font-sans antialiased">
         <NextAuthProvider>{children}</NextAuthProvider>
       </body>
