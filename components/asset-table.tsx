@@ -147,7 +147,7 @@ export function AssetTable({
             </TableHeader>
             <TableBody>
               {initialAssets.map((a) => {
-                let dynamicStatus = "Healthy";
+                let dynamicStatus: "Healthy" | "Critical" | "Warning" | "Watch" = "Healthy";
                 if (a.sisaUmurHari <= 30) dynamicStatus = "Critical";
                 else if (a.sisaUmurHari <= 90) dynamicStatus = "Warning";
                 else if (a.sisaUmurHari <= 180) dynamicStatus = "Watch";

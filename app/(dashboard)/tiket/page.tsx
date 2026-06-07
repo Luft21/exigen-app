@@ -13,6 +13,7 @@ import { AjukanGantiModal } from "@/components/ajukan-ganti-modal";
 import { ApproveGantiModal } from "@/components/approve-ganti-modal";
 import { ActionButtonClient } from "@/components/action-button-client";
 import { TiketFilter } from "@/components/tiket-filter";
+import { SeverityBadge } from "@/components/severity-badge";
 import prisma from "@/lib/prisma";
 
 const statusColor: Record<string, string> = {
@@ -96,7 +97,8 @@ export default async function TiketPage({
 
   const teknisiList = await prisma.user.findMany({
     where: { role: "TEKNISI" },
-    select: { id: true, nama: true, username: true }
+    select: { id: true, nama: true, username: true },
+    orderBy: { nama: "asc" }
   });
 
   const [historyTickets, totalHistory, stagingTickets] = await Promise.all([
@@ -128,10 +130,14 @@ export default async function TiketPage({
 
   // Load distinct filter options
   const [gedungList, lantaiList, zonaList, kerusakanList] = await Promise.all([
-    prisma.masterAsset.findMany({ select: { lokasiGedung: true }, distinct: ['lokasiGedung'] }).then(res => res.map(r => r.lokasiGedung).filter(Boolean)),
-    prisma.masterAsset.findMany({ select: { lokasiLantai: true }, distinct: ['lokasiLantai'] }).then(res => res.map(r => r.lokasiLantai).filter(Boolean)),
-    prisma.masterAsset.findMany({ select: { lokasiZona: true }, distinct: ['lokasiZona'] }).then(res => res.map(r => r.lokasiZona).filter(Boolean)),
-    prisma.assetComplaint.findMany({ select: { jenisKerusakan: true }, distinct: ['jenisKerusakan'] }).then(res => res.map(r => r.jenisKerusakan).filter(k => k && k !== "-")),
+    prisma.masterAsset.findMany({ select: { lokasiGedung: true }, distinct: ['lokasiGedung'] })
+      .then(res => res.map(r => r.lokasiGedung).filter(Boolean).sort((a: string, b: string) => a.localeCompare(b))),
+    prisma.masterAsset.findMany({ select: { lokasiLantai: true }, distinct: ['lokasiLantai'] })
+      .then(res => res.map(r => r.lokasiLantai).filter(Boolean).sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true }))),
+    prisma.masterAsset.findMany({ select: { lokasiZona: true }, distinct: ['lokasiZona'] })
+      .then(res => res.map(r => r.lokasiZona).filter(Boolean).sort((a: string, b: string) => a.localeCompare(b))),
+    prisma.assetComplaint.findMany({ select: { jenisKerusakan: true }, distinct: ['jenisKerusakan'] })
+      .then(res => res.map(r => r.jenisKerusakan).filter(k => k && k !== "-").sort((a: string, b: string) => a.localeCompare(b))),
   ]);
 
   const activeIds = activeTickets.map((t) => t.id);
@@ -179,9 +185,7 @@ export default async function TiketPage({
                 <div className="text-muted-foreground">{t.predLokasiLantai?.replace("Lantai ", "Lt. ")}, {t.predLokasiZona}</div>
               </td>
               <td className="py-4 px-4 align-middle">
-                <Badge variant="outline" className={`text-[10px] ${t.predSeverityAwal === 'Tinggi' ? 'bg-red-100 text-red-800 border-red-300' : t.predSeverityAwal === 'Sedang' ? 'bg-orange-100 text-orange-800 border-orange-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300'}`}>
-                  {t.predSeverityAwal}
-                </Badge>
+                <SeverityBadge severity={t.predSeverityAwal} />
               </td>
               <td className="py-4 px-4 align-middle text-center">
                 <div className="flex justify-center gap-2">
@@ -345,7 +349,7 @@ export default async function TiketPage({
                 value="staging" 
                 className="group font-medium gap-2 text-slate-500 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md transition-all rounded-md py-2"
               >
-                <MessageSquareWarning className="h-4 w-4" /> Staging NLP
+                <MessageSquareWarning className="h-4 w-4" /> Komplain hasil NLP
                 <span className="ml-1 inline-flex items-center justify-center bg-slate-200 text-slate-600 group-data-[state=active]:bg-white group-data-[state=active]:text-primary text-[10px] font-bold h-5 px-1.5 min-w-[20px] rounded-full">
                   {stagingTickets.length >= 1000 ? (stagingTickets.length / 1000).toFixed(1) + 'k' : stagingTickets.length}
                 </span>

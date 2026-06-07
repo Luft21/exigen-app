@@ -3,6 +3,8 @@ import { JetBrains_Mono, Work_Sans } from "next/font/google";
 import "./globals.css";
 import { NextAuthProvider } from "@/components/session-provider";
 
+export const dynamic = "force-dynamic";
+
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-heading",
   subsets: ["latin"],

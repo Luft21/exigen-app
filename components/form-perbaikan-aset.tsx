@@ -48,7 +48,7 @@ export function FormPerbaikanAset({
   const handleBiayaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const digits = e.target.value.replace(/\D/g, "");
     setRawBiaya(digits || "0");
-    setDisplayBiaya(digits ? Number(digits).toLocaleString("id-ID") : "");
+    setDisplayBiaya(digits ? Number(digits).toLocaleString("en-US") : "");
   };
 
   const handleSubmit = async (e: { preventDefault(): void; currentTarget: HTMLFormElement }) => {

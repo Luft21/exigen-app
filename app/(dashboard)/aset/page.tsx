@@ -74,8 +74,8 @@ export default async function AsetPage({
     _count: true
   });
 
-  const categories = categoriesDb.map(c => c.kategori).filter(Boolean);
-  const locations = locationsDb.map(l => l.lokasiGedung).filter(Boolean);
+  const categories = categoriesDb.map((c: any) => c.kategori).filter(Boolean).sort((a: string, b: string) => a.localeCompare(b));
+  const locations = locationsDb.map((l: any) => l.lokasiGedung).filter(Boolean).sort((a: string, b: string) => a.localeCompare(b));
 
   return (
     <div className="space-y-6">

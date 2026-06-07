@@ -23,6 +23,7 @@ export function NewTicketClient() {
         confirmButtonColor: '#10b981'
       }).then(() => {
         router.push("/tiket");
+        router.refresh();
       });
     } else if (state.error) {
       Swal.fire({

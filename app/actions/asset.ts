@@ -7,6 +7,10 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
 
+declare const process: any;
+
+const AI_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+
 // Perbaikan langsung dari halaman aset (direct ticketing):
 // 1. Update kondisi MasterAsset
 // 2. Buat catatan AssetComplaint dengan status SELESAI
@@ -69,6 +73,9 @@ export async function perbaikiAset(formData: FormData) {
     }),
   ]);
 
+  // Recalculate RUL immediately after direct repair is recorded
+  await recalculateAssetRUL(id);
+
   revalidatePath("/aset");
   revalidatePath("/maintenance");
   revalidatePath("/tiket");
@@ -84,9 +91,13 @@ export async function searchAssetsForStaging(staging: any, searchKeyword: string
       status: "Aktif",
       ...(q ? {
         OR: [
-          { nama: { contains: q } },
-          { id: { contains: q } },
-          { lokasiGedung: { contains: q } },
+          { nama: { contains: q, mode: 'insensitive' } },
+          { id: { contains: q, mode: 'insensitive' } },
+          { lokasiGedung: { contains: q, mode: 'insensitive' } },
+          { lokasiLantai: { contains: q, mode: 'insensitive' } },
+          { lokasiZona: { contains: q, mode: 'insensitive' } },
+          { tipe: { contains: q, mode: 'insensitive' } },
+          { model: { contains: q, mode: 'insensitive' } },
         ]
       } : {})
     },
@@ -95,6 +106,7 @@ export async function searchAssetsForStaging(staging: any, searchKeyword: string
       nama: true,
       kategori: true,
       tipe: true,
+      model: true,
       lokasiGedung: true,
       lokasiLantai: true,
       lokasiZona: true,
@@ -125,4 +137,124 @@ export async function searchAssetsForStaging(staging: any, searchKeyword: string
   }).sort((a, b) => b.score - a.score);
 
   return scoredAssets.slice(0, 15);
+}
+
+export async function recalculateAssetRUL(assetId: string) {
+  try {
+    const asset = await prisma.masterAsset.findUnique({
+      where: { id: assetId },
+      include: {
+        complaints: {
+          orderBy: { tanggalPengerjaan: "asc" }
+        }
+      }
+    });
+
+    if (!asset) {
+      console.warn(`[recalculateAssetRUL] Asset with ID ${assetId} not found.`);
+      return;
+    }
+
+    if (asset.status !== "Aktif") {
+      console.log(`[recalculateAssetRUL] Asset status is ${asset.status}, skipping RUL recalculation.`);
+      return;
+    }
+
+    const complaints = asset.complaints || [];
+    const totalKomplain = complaints.length;
+
+    const sevMap: Record<string, number> = {
+      'Ringan': 1, 'Sedang': 2, 'Berat': 3, 'Fatal': 4,
+      'Rendah': 1, 'Tinggi': 3, 'Kritis': 4,
+      'Low': 1, 'Medium': 2, 'High': 3, 'Critical': 4
+    };
+
+    const biayaTotal = complaints.reduce((sum: number, c: any) => sum + c.biayaPerbaikan, 0);
+    const biayaMean = totalKomplain > 0 ? biayaTotal / totalKomplain : 0;
+
+    // Hitung rata-rata hari antar komplain
+    let intervalSum = 0;
+    let validIntervals = 0;
+    for (let i = 1; i < totalKomplain; i++) {
+      const tPrev = complaints[i - 1].tanggalPengerjaan;
+      const tCurr = complaints[i].tanggalPengerjaan;
+      if (tPrev && tCurr) {
+        const diffDays = Math.floor((new Date(tCurr).getTime() - new Date(tPrev).getTime()) / (1000 * 60 * 60 * 24));
+        intervalSum += diffDays;
+        validIntervals++;
+      }
+    }
+    const hariAntarKomplainMean = validIntervals > 0 ? intervalSum / validIntervals : 0.0;
+
+    // Hitung umur aset
+    const installDate = new Date(asset.tanggalInstalasi);
+    const ageToday = Math.max(1, Math.floor((new Date().getTime() - installDate.getTime()) / (1000 * 60 * 60 * 24)));
+    
+    let ageAtComplaint = ageToday;
+    const lastComp = complaints[totalKomplain - 1];
+    if (lastComp && lastComp.tanggalPengerjaan) {
+      ageAtComplaint = Math.max(1, Math.floor((new Date(lastComp.tanggalPengerjaan).getTime() - installDate.getTime()) / (1000 * 60 * 60 * 24)));
+    }
+
+    // Hitung severity stats
+    const severities = complaints.map((c: any) => sevMap[c.severity] || 1);
+    const severityMean = severities.length > 0 ? severities.reduce((sum: number, s: number) => sum + s, 0) / severities.length : 1.0;
+    const severityMax = severities.length > 0 ? Math.max(...severities) : 1.0;
+
+    const complaintVelocity = totalKomplain / ageToday;
+
+    const features = {
+      kategori: asset.kategori,
+      sub_kategori: asset.subKategori,
+      tipe: asset.tipe,
+      merek: asset.merek,
+      tingkat_kekritisan: asset.tingkatKekritisan,
+      total_komplain: totalKomplain,
+      biaya_total: biayaTotal,
+      biaya_mean: biayaMean,
+      hari_antar_komplain_mean: hariAntarKomplainMean,
+      umur_saat_ini: ageToday,
+      umur_saat_komplain_terakhir: ageAtComplaint,
+      Severity_Mean: severityMean,
+      Severity_Max: severityMax,
+      complaint_velocity: complaintVelocity
+    };
+
+    console.log(`[recalculateAssetRUL] Requesting RUL prediction for asset ${assetId}...`);
+    const pyRes = await fetch(`${AI_URL}/api/predict/rul`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        asset_id: asset.id,
+        features,
+      }),
+    });
+
+    if (!pyRes.ok) {
+      throw new Error(`FastAPI prediction failed with status ${pyRes.status}: ${pyRes.statusText}`);
+    }
+
+    const result = await pyRes.json();
+    const newRUL = Math.round(result.predicted_rul_days);
+    const newEstimasi = new Date();
+    newEstimasi.setDate(newEstimasi.getDate() + newRUL);
+
+    let health = "Healthy";
+    if (newRUL <= 30) health = "Critical";
+    else if (newRUL <= 90) health = "Warning";
+    else if (newRUL <= 180) health = "Watch";
+
+    await prisma.masterAsset.update({
+      where: { id: assetId },
+      data: {
+        sisaUmurHari: newRUL,
+        estimasiPenggantian: newEstimasi,
+        healthStatus: health,
+      },
+    });
+
+    console.log(`[recalculateAssetRUL] Asset ${assetId} updated successfully: RUL = ${newRUL} days, Health = ${health}`);
+  } catch (error) {
+    console.error(`[recalculateAssetRUL] Error recalculating RUL for asset ${assetId}:`, error);
+  }
 }

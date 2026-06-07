@@ -5,6 +5,11 @@ import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
+import { recalculateAssetRUL } from "./asset";
+
+declare const process: any;
+
+const AI_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
 // 1. Integrasi NLP: Membuat tiket baru dengan status MENUNGGU_TEKNISI (Diakses dari Client Component)
 export async function buatTiketOtomatisClient(
@@ -24,7 +29,7 @@ export async function buatTiketOtomatisClient(
   const rawId = `CMP-NLP-${Math.random().toString(36).substring(7)}`;
 
   try {
-    const aiResponse = await fetch("http://127.0.0.1:8000/api/predict/text", {
+    const aiResponse = await fetch(`${AI_URL}/api/predict/text`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -104,7 +109,7 @@ export async function buatKomplainGuest(
   let aiData: any = null;
 
   try {
-    const aiResponse = await fetch("http://127.0.0.1:8000/api/predict/text", {
+    const aiResponse = await fetch(`${AI_URL}/api/predict/text`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text_complaint: keluhan }),
@@ -265,7 +270,7 @@ export async function approvePenggantian(formData: FormData) {
   const oldAsset = tiket.asset;
 
   // Transaction untuk memastikan keamanan data
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: any) => {
     // a. Pensiunkan aset lama
     await tx.masterAsset.update({
       where: { id: oldAsset.id },
@@ -320,6 +325,9 @@ export async function approvePenggantian(formData: FormData) {
     });
   });
 
+  // Recalculate RUL for the new asset immediately after replacement
+  await recalculateAssetRUL(idAsetBaru);
+
   revalidatePath("/manajemen");
   revalidatePath("/penggantian");
   revalidatePath("/aset");
@@ -357,6 +365,11 @@ export async function selesaikanServis(formData: FormData) {
   const sparePartDigunakan = formData.get("sparePartDigunakan") as string;
   const severity = formData.get("severity") as string; // Severity riil
 
+  const ticket = await prisma.assetComplaint.findUnique({
+    where: { id: idTiket },
+    select: { idAset: true }
+  });
+
   await prisma.assetComplaint.update({
     where: { id: idTiket },
     data: {
@@ -369,6 +382,10 @@ export async function selesaikanServis(formData: FormData) {
       statusTiket: StatusTiket.SELESAI,
     },
   });
+
+  if (ticket?.idAset) {
+    await recalculateAssetRUL(ticket.idAset);
+  }
 
   revalidatePath("/tiket");
   revalidatePath("/maintenance");
@@ -421,6 +438,10 @@ export async function buatDataServisHistory(formData: FormData) {
       // Jika diperlukan, bisa disimpan juga ke KomplainPerbaikan
     },
   });
+
+  if (idAset) {
+    await recalculateAssetRUL(idAset);
+  }
 
   // Simpan keluhan awal ke KomplainPerbaikan (Staging) sebagai arsip
   await prisma.komplainPerbaikan.create({

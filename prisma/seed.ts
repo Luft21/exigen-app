@@ -81,6 +81,13 @@ function chunkArray<T>(array: T[], size: number): T[][] {
 }
 
 async function main() {
+  // Cek apakah database sudah di-seed sebelumnya
+  const assetCount = await prisma.masterAsset.count();
+  if (assetCount > 0) {
+    console.log('Database sudah terisi data (seeded). Melewati seeding BATCH.');
+    return;
+  }
+
   console.log('Mulai seeding data dengan mode BATCH (Super Cepat)...');
 
   // 1. Buat User Default

@@ -14,8 +14,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Mic, MicOff, Plus, FileText, AlertCircle, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import Swal from "sweetalert2";
 
 export function NewTicketModal() {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   
   // Recording states
@@ -62,15 +67,23 @@ export function NewTicketModal() {
 
           const data = await res.json();
           if (res.ok && data.success) {
-            setReportText(prev => prev ? prev + " " + data.text : data.text);
+            setReportText((prev: string) => prev ? prev + " " + data.text : data.text);
             setAudioBlob(null); // Clear blob agar dikirim sebagai teks
           } else {
             console.error("Transkripsi gagal:", data.error);
-            alert("Gagal melakukan transkripsi suara: " + (data.error || "Unknown error"));
+            Swal.fire({
+              icon: "error",
+              title: "Transkripsi Gagal",
+              text: "Gagal melakukan transkripsi suara: " + (data.error || "Unknown error"),
+            });
           }
         } catch (error) {
           console.error("Error transcribing:", error);
-          alert("Terjadi kesalahan sistem saat transkripsi suara.");
+          Swal.fire({
+            icon: "error",
+            title: "Kesalahan Sistem",
+            text: "Terjadi kesalahan sistem saat transkripsi suara.",
+          });
         } finally {
           setIsTranscribing(false);
         }
@@ -83,7 +96,11 @@ export function NewTicketModal() {
       setRawAiResponse(null);
     } catch (err) {
       console.error("Gagal mengakses mikrofon", err);
-      alert("Tidak dapat mengakses mikrofon. Pastikan Anda telah memberikan izin.");
+      Swal.fire({
+        icon: "warning",
+        title: "Akses Mikrofon Ditolak",
+        text: "Tidak dapat mengakses mikrofon. Pastikan Anda telah memberikan izin.",
+      });
     }
   };
 
@@ -125,7 +142,11 @@ export function NewTicketModal() {
       } else {
         // Kirim teks murni
         if (!reportText.trim()) {
-          alert("Silakan ketik keluhan atau rekam suara Anda.");
+          Swal.fire({
+            icon: "info",
+            title: "Laporan Kosong",
+            text: "Silakan ketik keluhan atau rekam suara Anda.",
+          });
           setIsLoading(false);
           return;
         }
@@ -147,9 +168,19 @@ export function NewTicketModal() {
 
       if (result.success) {
         // Tiket berhasil dibuka
-        alert(result.message);
         setOpen(false);
         resetForm();
+        Swal.fire({
+          icon: "success",
+          title: "Berhasil!",
+          text: result.message || "Tiket komplain berhasil dibuat.",
+          confirmButtonColor: "#2563eb",
+        }).then(() => {
+          if (session) {
+            router.push("/tiket");
+            router.refresh();
+          }
+        });
       } else {
         // Tiket kurang lengkap (Draft)
         setPesanBot(result.message);
@@ -165,7 +196,11 @@ export function NewTicketModal() {
       }
     } catch (error) {
       console.error("Error submitting ticket", error);
-      alert("Terjadi kesalahan sistem saat mengirim laporan.");
+      Swal.fire({
+        icon: "error",
+        title: "Kesalahan Sistem",
+        text: "Terjadi kesalahan sistem saat mengirim laporan.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -181,7 +216,7 @@ export function NewTicketModal() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(newOpen) => {
+    <Dialog open={open} onOpenChange={(newOpen: boolean) => {
       setOpen(newOpen);
       if (!newOpen) resetForm();
     }}>
@@ -214,7 +249,7 @@ export function NewTicketModal() {
                   <p className="font-medium">{pesanBot}</p>
                   {missingEntities.length > 0 && (
                     <ul className="list-disc pl-4 text-xs opacity-90">
-                      {missingEntities.map((ent, idx) => (
+                      {missingEntities.map((ent: string, idx: number) => (
                         <li key={idx}>Mohon lengkapi info: <span className="font-semibold">{ent}</span></li>
                       ))}
                     </ul>

@@ -26,11 +26,11 @@ import {
 } from "@/components/ui/sidebar";
 
 const navItems = [
-  { title: "Overview",       href: "/dashboard",   icon: LayoutDashboard },
-  { title: "Tiket Komplain", href: "/tiket",        icon: Ticket },
-  { title: "Aset",           href: "/aset",         icon: Box },
-  { title: "Maintenance",    href: "/maintenance",   icon: Wrench },
-  { title: "Penggantian",    href: "/penggantian",   icon: RefreshCw },
+  { title: "Overview", href: "/dashboard", icon: LayoutDashboard },
+  { title: "Tiket Komplain", href: "/tiket", icon: Ticket },
+  { title: "Aset", href: "/aset", icon: Box },
+  { title: "Maintenance", href: "/maintenance", icon: Wrench },
+  { title: "Penggantian", href: "/penggantian", icon: RefreshCw },
 ];
 
 function getInitials(name?: string | null) {
@@ -91,7 +91,7 @@ export function AppSidebar() {
                       "w-full rounded-lg px-3 transition-all duration-150",
                       "hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
                       isActive &&
-                        "bg-primary text-primary-foreground font-semibold shadow-md hover:bg-primary/90 hover:text-primary-foreground"
+                      "bg-primary text-primary-foreground font-semibold shadow-md hover:bg-primary/90 hover:text-primary-foreground"
                     )}
                   >
                     <Link href={item.href} className="flex w-full items-center gap-2">
@@ -139,7 +139,10 @@ export function AppSidebar() {
 
           {/* Logout — tampil di expanded mode */}
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={async () => {
+              await signOut({ redirect: false });
+              window.location.href = "/login";
+            }}
             title="Logout"
             className="shrink-0 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors group-data-[collapsible=icon]:hidden"
           >

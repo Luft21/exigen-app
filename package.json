@@ -9,7 +9,7 @@
     "lint": "eslint",
     "prisma:push": "npx prisma db push",
     "prisma:seed": "npx prisma db seed"
-   },
+  },
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^2.4.3",
@@ -48,5 +48,8 @@
   "trustedDependencies": [
     "sharp",
     "unrs-resolver"
-  ]
+  ],
+  "prisma": {
+    "seed": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" prisma/seed.ts"
+  }
 }

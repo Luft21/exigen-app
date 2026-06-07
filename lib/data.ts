@@ -162,7 +162,7 @@ export function getMonthlyDamageFrequency() {
 }
 
 export function formatRupiah(n: number): string {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+  return "Rp " + new Intl.NumberFormat("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
 }
 
 export function formatDate(dateStr: string): string {

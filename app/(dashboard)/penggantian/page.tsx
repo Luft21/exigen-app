@@ -22,10 +22,9 @@ const formatDate = (date: Date | string | null) => {
 };
 
 const formatRupiah = (num: number) => {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
+  return "Rp " + new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(num);
 };
 

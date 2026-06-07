@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma";
 
 export const dynamic = 'force-dynamic'; // Prevent caching for cron jobs
 
+const AI_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+
 export async function GET() {
   try {
     const startTime = Date.now();
@@ -100,7 +102,7 @@ export async function GET() {
       console.log(`[RUL Cron] Sending ML batch ${Math.floor(i / pRequestBatchSize) + 1}/${Math.ceil(batchItems.length / pRequestBatchSize)} (${chunk.length} items)...`);
       
       try {
-        const pyRes = await fetch("http://127.0.0.1:8000/api/predict/rul/batch", {
+        const pyRes = await fetch(`${AI_URL}/api/predict/rul/batch`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ batch: chunk }),
@@ -130,7 +132,7 @@ export async function GET() {
         console.log(`[RUL Cron] Fallback ke single prediction untuk chunk offset ${i}...`);
         for (const item of chunk) {
           try {
-            const singleRes = await fetch("http://127.0.0.1:8000/api/predict/rul", {
+            const singleRes = await fetch(`${AI_URL}/api/predict/rul`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(item),

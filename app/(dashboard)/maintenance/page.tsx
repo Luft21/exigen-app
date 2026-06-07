@@ -20,17 +20,16 @@ const formatDate = (date: Date | string | null) => {
 };
 
 const formatRupiah = (num: number) => {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
+  return "Rp " + new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(num);
 };
 
 export default async function MaintenancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; tab?: string }>;
 }) {
   const params = await searchParams;
   const page = parseInt(params.page || "1", 10);
