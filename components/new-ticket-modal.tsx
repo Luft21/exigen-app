@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Mic, MicOff, Plus, FileText, AlertCircle, Loader2 } from "lucide-react";
+import { Mic, MicOff, Plus, FileText, AlertCircle, Loader2, Cpu, Building2, Layers, MapPin, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Swal from "sweetalert2";
@@ -215,44 +215,93 @@ export function NewTicketModal() {
     if (isRecording) stopRecording();
   };
 
+  const hasSubmitted = pesanBot !== null;
+  
+  // Dynamic parsing check based on entity list
+  const isAsetMissing = hasSubmitted && missingEntities.some(e => e.toLowerCase().includes("aset") || e.toLowerCase().includes("benda"));
+  const isGedungMissing = hasSubmitted && missingEntities.some(e => e.toLowerCase().includes("gedung") || e.toLowerCase().includes("lokasi"));
+  const isLantaiMissing = hasSubmitted && missingEntities.some(e => e.toLowerCase().includes("lantai"));
+  const isZonaMissing = hasSubmitted && missingEntities.some(e => e.toLowerCase().includes("zona") || e.toLowerCase().includes("ruang") || e.toLowerCase().includes("area") || e.toLowerCase().includes("spesifik"));
+
+  const asetStatus = !hasSubmitted ? "neutral" : isAsetMissing ? "missing" : "found";
+  const gedungStatus = !hasSubmitted ? "neutral" : isGedungMissing ? "missing" : "found";
+  const lantaiStatus = !hasSubmitted ? "neutral" : isLantaiMissing ? "missing" : "found";
+  const zonaStatus = !hasSubmitted ? "neutral" : isZonaMissing ? "missing" : "found";
+
+  const getPillClass = (status: "neutral" | "missing" | "found") => {
+    if (status === "found") {
+      return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 dark:border-emerald-500/10";
+    }
+    if (status === "missing") {
+      return "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 dark:border-rose-500/20 animate-shake ring-1 ring-rose-500/15";
+    }
+    return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200/50 dark:border-slate-800/80";
+  };
+
+  const getPillIcon = (status: "neutral" | "missing" | "found", defaultIcon: React.ReactNode) => {
+    if (status === "found") return <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />;
+    if (status === "missing") return <AlertCircle className="h-3.5 w-3.5 text-rose-500 shrink-0 animate-pulse" />;
+    return defaultIcon;
+  };
+
   return (
     <Dialog open={open} onOpenChange={(newOpen: boolean) => {
       setOpen(newOpen);
       if (!newOpen) resetForm();
     }}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gap-2">
+        <Button size="sm" className="gap-2 cursor-pointer shadow-sm hover:shadow-md transition-all">
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">New Ticket</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] border-white/10 dark:border-white/5 shadow-2xl rounded-2xl p-6">
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Buat Tiket Bantuan Pintar</DialogTitle>
-            <DialogDescription className="text-sm">
+          <DialogHeader className="pb-3 border-b mb-4">
+            <DialogTitle className="font-heading text-lg font-extrabold tracking-tight flex items-center gap-2">
+              <Cpu className="h-5 w-5 text-primary animate-pulse" /> Buat Tiket Bantuan Pintar
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
               Ceritakan keluhan Anda sejelas mungkin agar teknisi bisa langsung meluncur. 
-              Pastikan Anda menyebutkan: <br />
-              <span className="font-semibold text-primary">1. Benda/Aset yang rusak</span> • 
-              <span className="font-semibold text-primary"> 2. Lokasi Gedung & Lantai</span> • 
-              <span className="font-semibold text-primary"> 3. Ruangan spesifik</span>
+              Sistem AI akan otomatis membaca parameter berikut:
             </DialogDescription>
+            
+            {/* Dynamic checklist pills */}
+            <div className="grid grid-cols-2 gap-2 pt-3">
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all duration-300 ${getPillClass(asetStatus)}`}>
+                {getPillIcon(asetStatus, <Cpu className="h-3.5 w-3.5 text-slate-400 shrink-0" />)}
+                <span className="truncate">Aset</span>
+              </div>
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all duration-300 ${getPillClass(gedungStatus)}`}>
+                {getPillIcon(gedungStatus, <Building2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />)}
+                <span className="truncate">Lokasi Gedung</span>
+              </div>
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all duration-300 ${getPillClass(lantaiStatus)}`}>
+                {getPillIcon(lantaiStatus, <Layers className="h-3.5 w-3.5 text-slate-400 shrink-0" />)}
+                <span className="truncate">Lantai</span>
+              </div>
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all duration-300 ${getPillClass(zonaStatus)}`}>
+                {getPillIcon(zonaStatus, <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />)}
+                <span className="truncate">Zona</span>
+              </div>
+            </div>
           </DialogHeader>
           
-          <div className="grid gap-4 py-4">
-            
-            {/* Pesan Peringatan Bot (Jika is_complete false) */}
+          <div className="grid gap-4 py-3">
+            {/* Pesan Peringatan Bot */}
             {pesanBot && (
-              <div className="bg-destructive/15 text-destructive p-3 rounded-md flex items-start gap-3 text-sm">
-                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+              <div className="bg-rose-500/10 text-rose-600 dark:text-rose-400 p-3.5 rounded-xl border border-rose-500/20 flex items-start gap-3 text-xs leading-relaxed animate-fade-in-up">
+                <AlertCircle className="h-5 w-5 shrink-0 text-rose-500 mt-0.5" />
                 <div className="flex flex-col gap-1 w-full overflow-hidden">
-                  <p className="font-medium">{pesanBot}</p>
+                  <p className="font-extrabold">{pesanBot}</p>
                   {missingEntities.length > 0 && (
-                    <ul className="list-disc pl-4 text-xs opacity-90">
+                    <div className="flex flex-wrap gap-1.5 mt-2">
                       {missingEntities.map((ent: string, idx: number) => (
-                        <li key={idx}>Mohon lengkapi info: <span className="font-semibold">{ent}</span></li>
+                        <span key={idx} className="inline-flex items-center bg-rose-500/20 dark:bg-rose-500/30 text-rose-600 dark:text-rose-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-rose-500/20 uppercase tracking-wide">
+                          {ent}
+                        </span>
                       ))}
-                    </ul>
+                    </div>
                   )}
                 </div>
               </div>
@@ -260,30 +309,35 @@ export function NewTicketModal() {
 
             <div className="grid gap-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="keluhan">Deskripsi Masalah</Label>
+                <Label htmlFor="keluhan" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Deskripsi Masalah</Label>
                 
                 <div className="flex items-center gap-2">
                    <Button
                      type="button"
-                     variant={isRecording ? "destructive" : "secondary"}
-                     size="sm"
                      onClick={toggleRecording}
-                     className="h-7 gap-1 px-2 text-xs"
+                     className={`h-8 gap-1.5 px-3 text-xs rounded-full font-semibold transition-all duration-300 cursor-pointer ${
+                       isRecording 
+                         ? "bg-red-500 hover:bg-red-600 text-white animate-pulse" 
+                         : "bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
+                     }`}
                      disabled={isTranscribing || isLoading}
                    >
                      {isRecording ? (
                        <>
-                         <MicOff className="h-3 w-3 animate-pulse" />
-                         Stop Record
+                         <span className="relative flex h-2 w-2">
+                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                           <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                         </span>
+                         Merekam...
                        </>
                      ) : isTranscribing ? (
                        <>
-                         <Loader2 className="h-3 w-3 animate-spin" />
+                         <Loader2 className="h-3 w-3 animate-spin text-primary" />
                          Transkripsi...
                        </>
                      ) : (
                        <>
-                         <Mic className="h-3 w-3" />
+                         <Mic className="h-3.5 w-3.5 text-primary" />
                          Voice Note
                        </>
                      )}
@@ -295,7 +349,7 @@ export function NewTicketModal() {
                 id="keluhan"
                 name="keluhan"
                 placeholder="Contoh: AC split di ruang HRD gedung utama lantai 2 bocor parah netes air..."
-                className="min-h-[120px]"
+                className="min-h-[135px] rounded-xl border border-input bg-background/50 p-3.5 text-sm shadow-xs transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary placeholder:text-slate-400 dark:placeholder:text-slate-500 leading-relaxed font-sans"
                 value={reportText}
                 onChange={(e) => {
                   setReportText(e.target.value);
@@ -306,8 +360,21 @@ export function NewTicketModal() {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button type="submit" disabled={isLoading || isRecording} className="gap-2 w-full sm:w-auto">
+          <DialogFooter className="mt-4 pt-4 border-t border-border/40 flex flex-col sm:flex-row gap-2 justify-end">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setOpen(false)} 
+              className="rounded-xl w-full sm:w-auto cursor-pointer"
+              disabled={isLoading || isRecording}
+            >
+              Batal
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isLoading || isRecording || !reportText.trim()} 
+              className="gap-2 w-full sm:w-auto rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground font-bold shadow-sm cursor-pointer"
+            >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
