@@ -47,9 +47,8 @@ export default async function OverviewPage({ searchParams }: Props) {
     take: 5,
   });
 
-  const today = new Date("2026-06-18"); // Simulated system today
-  const histStart = new Date("2026-01-01");
-  const histEnd = new Date("2026-06-18");
+  const histStart = new Date("2025-07-01"); // Rolling 12 months start
+  const histEnd = new Date("2026-06-30"); // Rolling 12 months end
 
   const [
     asetGanti, 
@@ -60,9 +59,7 @@ export default async function OverviewPage({ searchParams }: Props) {
     distinctPlans,
     finishedComplaints,
     histComplaints,
-    histReplacements,
-    avgMaintenance,
-    avgReplacement
+    histReplacements
   ] = await Promise.all([
     prisma.masterAsset.count({ where: { status: "Aktif", sisaUmurHari: { lte: 0 } } }),
     prisma.masterAsset.aggregate({
@@ -120,39 +117,31 @@ export default async function OverviewPage({ searchParams }: Props) {
         statusTiket: "SELESAI",
         tanggalSelesai: { gte: histStart, lte: histEnd }
       },
-      select: { tanggalSelesai: true, biayaPerbaikan: true, kategori: true }
+      select: { tanggalSelesai: true, biayaPerbaikan: true }
     }),
     prisma.replacementHistory.findMany({
       where: {
         tanggalPenggantian: { gte: histStart, lte: histEnd }
       },
-      select: { tanggalPenggantian: true, biayaPenggantian: true, kategori: true }
-    }),
-    prisma.assetComplaint.groupBy({
-      by: ['kategori'],
-      where: { statusTiket: "SELESAI" },
-      _avg: { biayaPerbaikan: true }
-    }),
-    prisma.replacementHistory.groupBy({
-      by: ['kategori'],
-      _avg: { biayaPenggantian: true }
+      select: { tanggalPenggantian: true, biayaPenggantian: true }
     })
   ]);
 
   const maintenanceAsetIds = new Set(maintenanceComplaints.map(c => c.idAset).filter(Boolean));
   const asetMaintenance = maintenanceAsetIds.size;
 
+  // 1. Fetch active assets with extended details for spatial & category aggregation
   const allActiveAssets = await prisma.masterAsset.findMany({
     where: { status: "Aktif" },
     select: {
       sisaUmurHari: true,
       lokasiGedung: true,
       lokasiLantai: true,
-      kategori: true,
-      estimasiPenggantian: true
+      kategori: true
     }
   });
 
+  // Calculate RUL buckets
   const buckets = { kritis: 0, perhatian: 0, monitor: 0, sehat: 0 };
   allActiveAssets.forEach(a => {
     const rul = a.sisaUmurHari || 0;
@@ -162,6 +151,7 @@ export default async function OverviewPage({ searchParams }: Props) {
     else buckets.sehat++;
   });
 
+  // 2. Spatial Heatmap Data
   const spatialMap: Record<string, { lokasiGedung: string, lokasiLantai: string, total: number, critical: number }> = {};
   allActiveAssets.forEach(a => {
     const key = `${a.lokasiGedung}|${a.lokasiLantai}`;
@@ -175,6 +165,7 @@ export default async function OverviewPage({ searchParams }: Props) {
   });
   const heatmapData = Object.values(spatialMap);
 
+  // 3. Category Stacked Bar Data
   const categoryMap: Record<string, { kategori: string, kritis: number, perhatian: number, monitor: number, sehat: number, total: number }> = {};
   allActiveAssets.forEach(a => {
     const cat = a.kategori || "Lainnya";
@@ -190,6 +181,7 @@ export default async function OverviewPage({ searchParams }: Props) {
   });
   const categoryData = Object.values(categoryMap);
 
+  // 4. Compliance Rate Calculation (Jadwal vs Aktual)
   const freqMapDays: Record<string, number> = {
     'Harian': 1,
     'Mingguan': 7,
@@ -256,31 +248,23 @@ export default async function OverviewPage({ searchParams }: Props) {
     kepatuhan: Math.round(complianceRate),
   };
 
-  const maintCostMap: Record<string, number> = {};
-  avgMaintenance.forEach(item => {
-    maintCostMap[item.kategori] = Number(item._avg.biayaPerbaikan || 5000000);
-  });
-
-  const replCostMap: Record<string, number> = {};
-  avgReplacement.forEach(item => {
-    replCostMap[item.kategori] = Number(item._avg.biayaPenggantian || 50000000);
-  });
-
+  // 5. Cost Trend Data (Rolling 12 Months: Jul 2025 to Jun 2026)
   const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
   const costTrendData: Record<string, any> = {};
 
-  for (let m = 0; m < 12; m++) {
-    const key = `2026-${String(m + 1).padStart(2, '0')}`;
-    const label = `${months[m]} 26`;
+  const tempDate = new Date(histStart);
+  for (let i = 0; i < 12; i++) {
+    const y = tempDate.getFullYear();
+    const m = tempDate.getMonth();
+    const key = `${y}-${String(m + 1).padStart(2, '0')}`;
+    const label = `${months[m]} ${String(y).slice(-2)}`;
     costTrendData[key] = {
       label,
       key,
-      maintenanceActual: null,
-      replacementActual: null,
-      maintenanceProjected: null,
-      replacementProjected: null,
-      isProjection: m >= 6
+      maintenance: 0,
+      replacement: 0
     };
+    tempDate.setMonth(tempDate.getMonth() + 1);
   }
 
   histComplaints.forEach(c => {
@@ -288,8 +272,7 @@ export default async function OverviewPage({ searchParams }: Props) {
     const d = new Date(c.tanggalSelesai);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     if (costTrendData[key]) {
-      if (costTrendData[key].maintenanceActual === null) costTrendData[key].maintenanceActual = 0;
-      costTrendData[key].maintenanceActual += c.biayaPerbaikan;
+      costTrendData[key].maintenance += c.biayaPerbaikan;
     }
   });
 
@@ -297,41 +280,7 @@ export default async function OverviewPage({ searchParams }: Props) {
     const d = new Date(r.tanggalPenggantian);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     if (costTrendData[key]) {
-      if (costTrendData[key].replacementActual === null) costTrendData[key].replacementActual = 0;
-      costTrendData[key].replacementActual += r.biayaPenggantian;
-    }
-  });
-
-  const junKey = '2026-06';
-  if (costTrendData[junKey]) {
-    costTrendData[junKey].maintenanceProjected = costTrendData[junKey].maintenanceActual || 0;
-    costTrendData[junKey].replacementProjected = costTrendData[junKey].replacementActual || 0;
-  }
-
-  allActiveAssets.forEach(a => {
-    const expectedMaintDate = new Date(today);
-    expectedMaintDate.setDate(expectedMaintDate.getDate() + a.sisaUmurHari);
-    const maintYear = expectedMaintDate.getFullYear();
-    const maintMonth = expectedMaintDate.getMonth();
-
-    if (maintYear === 2026 && maintMonth >= 6) {
-      const key = `${maintYear}-${String(maintMonth + 1).padStart(2, '0')}`;
-      if (costTrendData[key]) {
-        if (costTrendData[key].maintenanceProjected === null) costTrendData[key].maintenanceProjected = 0;
-        costTrendData[key].maintenanceProjected += (maintCostMap[a.kategori || "Lainnya"] || 5000000);
-      }
-    }
-
-    const expectedReplDate = new Date(a.estimasiPenggantian);
-    const replYear = expectedReplDate.getFullYear();
-    const replMonth = expectedReplDate.getMonth();
-
-    if (replYear === 2026 && replMonth >= 6) {
-      const key = `${replYear}-${String(replMonth + 1).padStart(2, '0')}`;
-      if (costTrendData[key]) {
-        if (costTrendData[key].replacementProjected === null) costTrendData[key].replacementProjected = 0;
-        costTrendData[key].replacementProjected += (replCostMap[a.kategori || "Lainnya"] || 50000000);
-      }
+      costTrendData[key].replacement += r.biayaPenggantian;
     }
   });
 
@@ -339,6 +288,7 @@ export default async function OverviewPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="font-heading text-xl font-bold tracking-tight">Overview</h2>
@@ -349,6 +299,7 @@ export default async function OverviewPage({ searchParams }: Props) {
         <GlobalFilter />
       </div>
 
+      {/* Layer 1 - Hero Banner */}
       <div className="relative overflow-hidden rounded-xl border border-slate-200/60 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/30 p-4 shadow-none">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -365,11 +316,13 @@ export default async function OverviewPage({ searchParams }: Props) {
         </div>
       </div>
 
+      {/* Layer 1 - RUL Buckets Grid */}
       <div className="space-y-3">
         <h3 className="font-heading text-xs font-bold uppercase tracking-widest text-slate-500/80">
           Distribusi Sisa Umur Aset (RUL)
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card Kritis */}
           <Card className="relative overflow-hidden group bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60 hover:bg-slate-100/70 dark:hover:bg-slate-900/60 transition-colors shadow-none">
             <div className="absolute top-0 left-0 right-0 h-1 bg-destructive" />
             <CardContent className="p-4 flex flex-col justify-between h-36">
@@ -389,6 +342,7 @@ export default async function OverviewPage({ searchParams }: Props) {
             </CardContent>
           </Card>
 
+          {/* Card Perhatian */}
           <Card className="relative overflow-hidden group bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60 hover:bg-slate-100/70 dark:hover:bg-slate-900/60 transition-colors shadow-none">
             <div className="absolute top-0 left-0 right-0 h-1 bg-warning" />
             <CardContent className="p-4 flex flex-col justify-between h-36">
@@ -408,6 +362,7 @@ export default async function OverviewPage({ searchParams }: Props) {
             </CardContent>
           </Card>
 
+          {/* Card Monitor */}
           <Card className="relative overflow-hidden group bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60 hover:bg-slate-100/70 dark:hover:bg-slate-900/60 transition-colors shadow-none">
             <div className="absolute top-0 left-0 right-0 h-1 bg-watch" />
             <CardContent className="p-4 flex flex-col justify-between h-36">
@@ -419,7 +374,7 @@ export default async function OverviewPage({ searchParams }: Props) {
                 <p className="text-[11px] font-medium text-slate-400 mt-1">aset &middot; sisa 30&ndash;90 hari</p>
               </div>
               <div className="flex items-end justify-between mt-auto">
-                <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-watch/15 text-watch-foreground font-heading">
+                <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-watch/15 text-watch font-heading">
                   Monitor
                 </span>
                 <Sparkline variant="monitor" />
@@ -427,6 +382,7 @@ export default async function OverviewPage({ searchParams }: Props) {
             </CardContent>
           </Card>
 
+          {/* Card Sehat */}
           <Card className="relative overflow-hidden group bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60 hover:bg-slate-100/70 dark:hover:bg-slate-900/60 transition-colors shadow-none">
             <div className="absolute top-0 left-0 right-0 h-1 bg-success" />
             <CardContent className="p-4 flex flex-col justify-between h-36">
@@ -438,7 +394,7 @@ export default async function OverviewPage({ searchParams }: Props) {
                 <p className="text-[11px] font-medium text-slate-400 mt-1">aset &middot; sisa &gt; 90 hari</p>
               </div>
               <div className="flex items-end justify-between mt-auto">
-                <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-success/15 text-success-foreground font-heading">
+                <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-success/15 text-success font-heading">
                   Sehat
                 </span>
                 <Sparkline variant="sehat" />
@@ -448,6 +404,7 @@ export default async function OverviewPage({ searchParams }: Props) {
         </div>
       </div>
 
+      {/* Layer 1 - Metrik Operasional */}
       <div className="space-y-3">
         <h3 className="font-heading text-xs font-bold uppercase tracking-widest text-slate-500/80">
           Metrik Operasional
@@ -455,13 +412,16 @@ export default async function OverviewPage({ searchParams }: Props) {
         <KPICards data={kpiData} />
       </div>
 
+      {/* Layer 2 - Heatmap Kiri & Category Bar Kanan */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <HeatmapGedungLantai data={heatmapData} />
         <CategoryRULBarChart data={categoryData} />
       </div>
 
+      {/* Layer 3 - Cost Trend stack area */}
       <CostTrendChart data={costTrendList} />
 
+      {/* Aset Perlu Perhatian Segera */}
       <div>
         <h3 className="font-heading text-sm font-semibold tracking-tight mb-3">
           Aset Perlu Perhatian Segera

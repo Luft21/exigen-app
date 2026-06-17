@@ -165,30 +165,26 @@ const formatCost = (value: number) => {
 
 const CostTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    const isProj = data.isProjection;
-    const maint = isProj ? data.maintenanceProjected : data.maintenanceActual;
-    const repl = isProj ? data.replacementProjected : data.replacementActual;
-    const total = (maint || 0) + (repl || 0);
+    const maint = payload[0].payload.maintenance || 0;
+    const repl = payload[0].payload.replacement || 0;
+    const total = maint + repl;
 
     return (
       <div className="bg-card shadow-lg border border-border/50 rounded-lg p-3 text-xs z-50">
-        <p className="font-bold text-foreground mb-1">
-          {label} {isProj && <span className="text-[9px] text-warning font-heading font-extrabold ml-1 px-1.5 py-0.5 rounded-full bg-warning/15 uppercase tracking-wider">Proyeksi</span>}
-        </p>
+        <p className="font-bold text-foreground mb-1">{label}</p>
         <div className="space-y-1.5 mt-2">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-blue-500" />
             <span className="text-muted-foreground">Pemeliharaan:</span>
-            <span className="font-bold ml-auto">{formatCost(maint || 0)}</span>
+            <span className="font-bold ml-auto">{formatCost(maint)}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
             <span className="text-muted-foreground">Penggantian:</span>
-            <span className="font-bold ml-auto">{formatCost(repl || 0)}</span>
+            <span className="font-bold ml-auto">{formatCost(repl)}</span>
           </div>
           <div className="border-t border-border/50 pt-1.5 mt-1.5 font-bold flex text-foreground">
-            <span>Total Anggaran:</span>
+            <span>Total Realisasi:</span>
             <span className="ml-auto">{formatCost(total)}</span>
           </div>
         </div>
@@ -202,26 +198,18 @@ export function CostTrendChart({ data, height = 300 }: { data: any[], height?: n
   return (
     <Card className="animate-fade-in-up" style={{ animationDelay: "600ms" }}>
       <CardHeader className="pb-2">
-        <CardTitle className="font-heading text-sm text-foreground/80">Tren Anggaran Pemeliharaan vs Penggantian (Aktual vs Proyeksi Model)</CardTitle>
+        <CardTitle className="font-heading text-sm text-foreground/80">Tren Realisasi Anggaran (Pemeliharaan vs Penggantian)</CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={height}>
-          <AreaChart data={data} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
+          <AreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
             <defs>
-              <linearGradient id="actualMaintGrad" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="maintGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
                 <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
               </linearGradient>
-              <linearGradient id="projMaintGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15}/>
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-              </linearGradient>
-              <linearGradient id="actualReplGrad" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="replGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-              </linearGradient>
-              <linearGradient id="projReplGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.15}/>
                 <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
               </linearGradient>
             </defs>
@@ -241,67 +229,24 @@ export function CostTrendChart({ data, height = 300 }: { data: any[], height?: n
               tickFormatter={(v) => formatCost(v)}
             />
             <Tooltip content={<CostTooltip />} />
-            
-            {/* Draw vertical line today (Jun 26) */}
-            <ReferenceLine 
-              x="Jun 26" 
-              stroke="hsl(var(--foreground))" 
-              strokeWidth={2} 
-              strokeDasharray="4 4" 
-              label={{ 
-                value: 'HARI INI', 
-                position: 'top', 
-                fill: 'hsl(var(--foreground))', 
-                fontSize: 9, 
-                fontWeight: 'bold',
-                fontFamily: 'var(--font-heading)'
-              }} 
-            />
 
-            {/* Actual Areas */}
             <Area
               type="monotone"
-              dataKey="maintenanceActual"
+              dataKey="maintenance"
               stackId="a"
               stroke="#3b82f6"
               strokeWidth={2}
-              fill="url(#actualMaintGrad)"
-              name="Pemeliharaan (Aktual)"
-              connectNulls={true}
+              fill="url(#maintGrad)"
+              name="Biaya Pemeliharaan"
             />
             <Area
               type="monotone"
-              dataKey="replacementActual"
+              dataKey="replacement"
               stackId="a"
               stroke="#10b981"
               strokeWidth={2}
-              fill="url(#actualReplGrad)"
-              name="Penggantian (Aktual)"
-              connectNulls={true}
-            />
-
-            {/* Projected Areas */}
-            <Area
-              type="monotone"
-              dataKey="maintenanceProjected"
-              stackId="b"
-              stroke="#3b82f6"
-              strokeWidth={2}
-              strokeDasharray="4 4"
-              fill="url(#projMaintGrad)"
-              name="Pemeliharaan (Proyeksi)"
-              connectNulls={true}
-            />
-            <Area
-              type="monotone"
-              dataKey="replacementProjected"
-              stackId="b"
-              stroke="#10b981"
-              strokeWidth={2}
-              strokeDasharray="4 4"
-              fill="url(#projReplGrad)"
-              name="Penggantian (Proyeksi)"
-              connectNulls={true}
+              fill="url(#replGrad)"
+              name="Biaya Penggantian"
             />
           </AreaChart>
         </ResponsiveContainer>
